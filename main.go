@@ -17,11 +17,37 @@ type Orchastrator interface {
 	ReadFile(name string, dir string) ([]byte, error)
 	DeleteFile(name string, dir string) error
 	LS(dir string) error
-	CreateDir(name string) error
-	DeleteDir(name string) error
+	CreateDir(dir string) error
+	DeleteDir(dir string) error
 }
 
 type Server interface {
+}
+
+func NewMaster() Orchastrator {
+	return &Master{
+		FileToHandlesMap:  make(map[string][]ChunckHandle),
+		HandleToServerMap: make(map[string]ChunckServer),
+	}
+}
+
+func (m *Master) CreateFile(name, dir string, data []byte) error {
+	return nil
+}
+func (m *Master) ReadFile(name, dir string) ([]byte, error) {
+	return []byte{}, nil
+}
+func (m *Master) DeleteFile(name, dir string) error {
+	return nil
+}
+func (m *Master) CreateDir(dir string) error {
+	return nil
+}
+func (m *Master) DeleteDir(dir string) error {
+	return nil
+}
+func (m *Master) LS(dir string) error {
+	return nil
 }
 
 func main() {
