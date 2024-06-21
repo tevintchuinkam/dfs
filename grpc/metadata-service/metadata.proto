@@ -1,0 +1,17 @@
+syntax = "proto3";
+package metadata;
+
+message MetadataRequest {
+    string filename = 1;
+    int64 chunkIndex = 2;
+}
+
+message MetadataResponse {
+    string chunkHandle = 1;
+    string url = 2;
+    string err = 3;
+}
+
+service MetadataService {
+    rpc GetMetadata(MetadataRequest) returns MetadataResponse {}
+}
