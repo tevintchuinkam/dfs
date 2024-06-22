@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChunkServiceClient interface {
 	StoreChunk(ctx context.Context, in *StoreChunkRequest, opts ...grpc.CallOption) (*StoreChunkResponse, error)
-	GetChunk(ctx context.Context, in *GetChunkRequest, opts ...grpc.CallOption) (*GetChunkReponse, error)
+	GetChunk(ctx context.Context, in *GetChunkRequest, opts ...grpc.CallOption) (ChunkService_GetChunkClient, error)
 }
 
 type chunkServiceClient struct {
@@ -36,20 +36,43 @@ func NewChunkServiceClient(cc grpc.ClientConnInterface) ChunkServiceClient {
 
 func (c *chunkServiceClient) StoreChunk(ctx context.Context, in *StoreChunkRequest, opts ...grpc.CallOption) (*StoreChunkResponse, error) {
 	out := new(StoreChunkResponse)
-	err := c.cc.Invoke(ctx, "/ChunkService/StoreChunk", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/chunks.ChunkService/StoreChunk", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chunkServiceClient) GetChunk(ctx context.Context, in *GetChunkRequest, opts ...grpc.CallOption) (*GetChunkReponse, error) {
-	out := new(GetChunkReponse)
-	err := c.cc.Invoke(ctx, "/ChunkService/GetChunk", in, out, opts...)
+func (c *chunkServiceClient) GetChunk(ctx context.Context, in *GetChunkRequest, opts ...grpc.CallOption) (ChunkService_GetChunkClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChunkService_ServiceDesc.Streams[0], "/chunks.ChunkService/GetChunk", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &chunkServiceGetChunkClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ChunkService_GetChunkClient interface {
+	Recv() (*GetChunkReponse, error)
+	grpc.ClientStream
+}
+
+type chunkServiceGetChunkClient struct {
+	grpc.ClientStream
+}
+
+func (x *chunkServiceGetChunkClient) Recv() (*GetChunkReponse, error) {
+	m := new(GetChunkReponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ChunkServiceServer is the server API for ChunkService service.
@@ -57,7 +80,7 @@ func (c *chunkServiceClient) GetChunk(ctx context.Context, in *GetChunkRequest, 
 // for forward compatibility
 type ChunkServiceServer interface {
 	StoreChunk(context.Context, *StoreChunkRequest) (*StoreChunkResponse, error)
-	GetChunk(context.Context, *GetChunkRequest) (*GetChunkReponse, error)
+	GetChunk(*GetChunkRequest, ChunkService_GetChunkServer) error
 	mustEmbedUnimplementedChunkServiceServer()
 }
 
@@ -68,8 +91,8 @@ type UnimplementedChunkServiceServer struct {
 func (UnimplementedChunkServiceServer) StoreChunk(context.Context, *StoreChunkRequest) (*StoreChunkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StoreChunk not implemented")
 }
-func (UnimplementedChunkServiceServer) GetChunk(context.Context, *GetChunkRequest) (*GetChunkReponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetChunk not implemented")
+func (UnimplementedChunkServiceServer) GetChunk(*GetChunkRequest, ChunkService_GetChunkServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetChunk not implemented")
 }
 func (UnimplementedChunkServiceServer) mustEmbedUnimplementedChunkServiceServer() {}
 
@@ -94,7 +117,7 @@ func _ChunkService_StoreChunk_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ChunkService/StoreChunk",
+		FullMethod: "/chunks.ChunkService/StoreChunk",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChunkServiceServer).StoreChunk(ctx, req.(*StoreChunkRequest))
@@ -102,40 +125,45 @@ func _ChunkService_StoreChunk_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChunkService_GetChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetChunkRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _ChunkService_GetChunk_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetChunkRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ChunkServiceServer).GetChunk(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ChunkService/GetChunk",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChunkServiceServer).GetChunk(ctx, req.(*GetChunkRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ChunkServiceServer).GetChunk(m, &chunkServiceGetChunkServer{stream})
+}
+
+type ChunkService_GetChunkServer interface {
+	Send(*GetChunkReponse) error
+	grpc.ServerStream
+}
+
+type chunkServiceGetChunkServer struct {
+	grpc.ServerStream
+}
+
+func (x *chunkServiceGetChunkServer) Send(m *GetChunkReponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // ChunkService_ServiceDesc is the grpc.ServiceDesc for ChunkService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChunkService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChunkService",
+	ServiceName: "chunks.ChunkService",
 	HandlerType: (*ChunkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "StoreChunk",
 			Handler:    _ChunkService_StoreChunk_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "GetChunk",
-			Handler:    _ChunkService_GetChunk_Handler,
+			StreamName:    "GetChunk",
+			Handler:       _ChunkService_GetChunk_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "chunks.proto",
 }

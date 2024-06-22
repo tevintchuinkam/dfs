@@ -1,10 +1,9 @@
 
 proto-chunks:
-	cd grpc && protoc --go-grpc_out=. chunks.proto 
+	cd grpc && protoc --go_out=. --go-grpc_out=. chunks.proto 
 
 proto-metadata:
-	cd grpc && protoc --go-grpc_out=. metadata.proto 
-chat:
-	cd grpc && protoc --go-grpc_out=. chat.proto 
+	cd grpc && protoc --go_out=. --go-grpc_out=. metadata.proto 
+
 
 

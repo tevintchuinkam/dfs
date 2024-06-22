@@ -1,5 +1,6 @@
 syntax = "proto3";
 option go_package = "./chunks";
+package chunks;
 
 message GetChunkRequest {
     string handle = 1;
@@ -21,6 +22,6 @@ message StoreChunkResponse {
 }
 
 service ChunkService {
-    rpc StoreChunk(StoreChunkRequest) returns (StoreChunkResponse) {}
-    rpc GetChunk(GetChunkRequest) returns (GetChunkReponse) {}
+    rpc StoreChunk(StoreChunkRequest) returns (StoreChunkResponse);
+    rpc GetChunk(GetChunkRequest) returns (stream GetChunkReponse);
 }
