@@ -1,5 +1,6 @@
 syntax = "proto3";
 package metadata;
+option go_package = "./metadata";
 
 message MetadataRequest {
     string filename = 1;
@@ -13,5 +14,5 @@ message MetadataResponse {
 }
 
 service MetadataService {
-    rpc GetMetadata(MetadataRequest) returns MetadataResponse {}
+    rpc GetMetadata(MetadataRequest) returns (MetadataResponse) {}
 }
