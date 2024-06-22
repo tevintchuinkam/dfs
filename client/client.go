@@ -1,11 +1,9 @@
-package client
+package main
 
-
-func main(){
+func main() {
 	// take in incoming requests of filename + byte offset and range
 
-	// compute the chunk indexes 
+	// compute the chunk indexes
 
-
-	// 
+	//
 }

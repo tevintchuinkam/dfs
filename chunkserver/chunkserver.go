@@ -1,4 +1,4 @@
-package chunksever
+package main
 
 import (
 	"log"

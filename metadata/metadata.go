@@ -1,4 +1,4 @@
-package metadata
+package main
 
 import (
 	"fmt"
@@ -8,8 +8,35 @@ import (
 	"sync"
 	"time"
 
+	"log"
+	"net"
+
 	"github.com/google/uuid"
+	"github.com/tevintchuinkam/tdfs/grpc/metadata"
+	"google.golang.org/grpc"
 )
+
+func main() {
+	// accept connections
+	port := ":9000"
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("failed to listen on port %s: %v", port, err)
+	}
+	s := metadata.Server{}
+	grpcServer := grpc.NewServer()
+	metadata.RegisterMetadataServiceServer(grpcServer, &s)
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("metadata server failed to start: %v", err)
+		// https://www.youtube.com/watch?v=BdzYdN_Zd9Q
+	}
+
+	// store the incoming files
+
+	// return the requested files
+
+}
 
 type directory struct {
 	name    string

@@ -10,7 +10,6 @@ message MetadataRequest {
 message MetadataResponse {
     string chunkHandle = 1;
     string url = 2;
-    string err = 3;
 }
 
 service MetadataService {
