@@ -19,6 +19,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+// ensures that ChunkServer implements chunkServiceClient
+var _ MetadataServiceServer = (*MetaDataServer)(nil)
+
 func New(port int) *MetaDataServer {
 	return &MetaDataServer{
 		port: port,

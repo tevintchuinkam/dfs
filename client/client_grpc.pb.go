@@ -18,158 +18,266 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// ChunkServiceClient is the client API for ChunkService service.
+// ClientServiceClient is the client API for ClientService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type ChunkServiceClient interface {
-	GetFile(ctx context.Context, in *FileRequest, opts ...grpc.CallOption) (*FileResponse, error)
+type ClientServiceClient interface {
+	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
+	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
+	MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error)
 	LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error)
 	Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error)
+	Tree(ctx context.Context, in *TreeRequest, opts ...grpc.CallOption) (*TreeResponse, error)
 }
 
-type chunkServiceClient struct {
+type clientServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewChunkServiceClient(cc grpc.ClientConnInterface) ChunkServiceClient {
-	return &chunkServiceClient{cc}
+func NewClientServiceClient(cc grpc.ClientConnInterface) ClientServiceClient {
+	return &clientServiceClient{cc}
 }
 
-func (c *chunkServiceClient) GetFile(ctx context.Context, in *FileRequest, opts ...grpc.CallOption) (*FileResponse, error) {
-	out := new(FileResponse)
-	err := c.cc.Invoke(ctx, "/client.ChunkService/GetFile", in, out, opts...)
+func (c *clientServiceClient) CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error) {
+	out := new(CreateFileResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/CreateFile", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chunkServiceClient) LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error) {
+func (c *clientServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
+	out := new(GetFileResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/GetFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clientServiceClient) MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error) {
+	out := new(MkDirResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/MkDir", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clientServiceClient) LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error) {
 	out := new(LSResponse)
-	err := c.cc.Invoke(ctx, "/client.ChunkService/LS", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/client.ClientService/LS", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chunkServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error) {
+func (c *clientServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error) {
 	out := new(GrepReponse)
-	err := c.cc.Invoke(ctx, "/client.ChunkService/Grep", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/client.ClientService/Grep", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// ChunkServiceServer is the server API for ChunkService service.
-// All implementations must embed UnimplementedChunkServiceServer
+func (c *clientServiceClient) Tree(ctx context.Context, in *TreeRequest, opts ...grpc.CallOption) (*TreeResponse, error) {
+	out := new(TreeResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/Tree", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ClientServiceServer is the server API for ClientService service.
+// All implementations must embed UnimplementedClientServiceServer
 // for forward compatibility
-type ChunkServiceServer interface {
-	GetFile(context.Context, *FileRequest) (*FileResponse, error)
+type ClientServiceServer interface {
+	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
+	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
+	MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error)
 	LS(context.Context, *LSRequest) (*LSResponse, error)
 	Grep(context.Context, *GrepRequest) (*GrepReponse, error)
-	mustEmbedUnimplementedChunkServiceServer()
+	Tree(context.Context, *TreeRequest) (*TreeResponse, error)
+	mustEmbedUnimplementedClientServiceServer()
 }
 
-// UnimplementedChunkServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedChunkServiceServer struct {
+// UnimplementedClientServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedClientServiceServer struct {
 }
 
-func (UnimplementedChunkServiceServer) GetFile(context.Context, *FileRequest) (*FileResponse, error) {
+func (UnimplementedClientServiceServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
+}
+func (UnimplementedClientServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFile not implemented")
 }
-func (UnimplementedChunkServiceServer) LS(context.Context, *LSRequest) (*LSResponse, error) {
+func (UnimplementedClientServiceServer) MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MkDir not implemented")
+}
+func (UnimplementedClientServiceServer) LS(context.Context, *LSRequest) (*LSResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LS not implemented")
 }
-func (UnimplementedChunkServiceServer) Grep(context.Context, *GrepRequest) (*GrepReponse, error) {
+func (UnimplementedClientServiceServer) Grep(context.Context, *GrepRequest) (*GrepReponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Grep not implemented")
 }
-func (UnimplementedChunkServiceServer) mustEmbedUnimplementedChunkServiceServer() {}
+func (UnimplementedClientServiceServer) Tree(context.Context, *TreeRequest) (*TreeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Tree not implemented")
+}
+func (UnimplementedClientServiceServer) mustEmbedUnimplementedClientServiceServer() {}
 
-// UnsafeChunkServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to ChunkServiceServer will
+// UnsafeClientServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ClientServiceServer will
 // result in compilation errors.
-type UnsafeChunkServiceServer interface {
-	mustEmbedUnimplementedChunkServiceServer()
+type UnsafeClientServiceServer interface {
+	mustEmbedUnimplementedClientServiceServer()
 }
 
-func RegisterChunkServiceServer(s grpc.ServiceRegistrar, srv ChunkServiceServer) {
-	s.RegisterService(&ChunkService_ServiceDesc, srv)
+func RegisterClientServiceServer(s grpc.ServiceRegistrar, srv ClientServiceServer) {
+	s.RegisterService(&ClientService_ServiceDesc, srv)
 }
 
-func _ChunkService_GetFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FileRequest)
+func _ClientService_CreateFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateFileRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChunkServiceServer).GetFile(ctx, in)
+		return srv.(ClientServiceServer).CreateFile(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ChunkService/GetFile",
+		FullMethod: "/client.ClientService/CreateFile",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChunkServiceServer).GetFile(ctx, req.(*FileRequest))
+		return srv.(ClientServiceServer).CreateFile(ctx, req.(*CreateFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChunkService_LS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ClientService_GetFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClientServiceServer).GetFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/client.ClientService/GetFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClientServiceServer).GetFile(ctx, req.(*GetFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ClientService_MkDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MkDirRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClientServiceServer).MkDir(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/client.ClientService/MkDir",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClientServiceServer).MkDir(ctx, req.(*MkDirRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ClientService_LS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LSRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChunkServiceServer).LS(ctx, in)
+		return srv.(ClientServiceServer).LS(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ChunkService/LS",
+		FullMethod: "/client.ClientService/LS",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChunkServiceServer).LS(ctx, req.(*LSRequest))
+		return srv.(ClientServiceServer).LS(ctx, req.(*LSRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChunkService_Grep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ClientService_Grep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GrepRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChunkServiceServer).Grep(ctx, in)
+		return srv.(ClientServiceServer).Grep(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ChunkService/Grep",
+		FullMethod: "/client.ClientService/Grep",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChunkServiceServer).Grep(ctx, req.(*GrepRequest))
+		return srv.(ClientServiceServer).Grep(ctx, req.(*GrepRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// ChunkService_ServiceDesc is the grpc.ServiceDesc for ChunkService service.
+func _ClientService_Tree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TreeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClientServiceServer).Tree(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/client.ClientService/Tree",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClientServiceServer).Tree(ctx, req.(*TreeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ClientService_ServiceDesc is the grpc.ServiceDesc for ClientService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var ChunkService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "client.ChunkService",
-	HandlerType: (*ChunkServiceServer)(nil),
+var ClientService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "client.ClientService",
+	HandlerType: (*ClientServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "CreateFile",
+			Handler:    _ClientService_CreateFile_Handler,
+		},
+		{
 			MethodName: "GetFile",
-			Handler:    _ChunkService_GetFile_Handler,
+			Handler:    _ClientService_GetFile_Handler,
+		},
+		{
+			MethodName: "MkDir",
+			Handler:    _ClientService_MkDir_Handler,
 		},
 		{
 			MethodName: "LS",
-			Handler:    _ChunkService_LS_Handler,
+			Handler:    _ClientService_LS_Handler,
 		},
 		{
 			MethodName: "Grep",
-			Handler:    _ChunkService_Grep_Handler,
+			Handler:    _ClientService_Grep_Handler,
+		},
+		{
+			MethodName: "Tree",
+			Handler:    _ClientService_Tree_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

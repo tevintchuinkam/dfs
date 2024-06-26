@@ -2,13 +2,31 @@ syntax = "proto3";
 option go_package = "./client";
 package client;
 
-message FileRequest {
+message CreateFileRequest {
+    string name = 1;
+    string dir = 2;
+    bytes data = 3;
+}
+
+message CreateFileResponse {
+    int64 bytesWritten = 1;
+}
+
+message GetFileRequest {
     string handle = 1;
 }
 
-message FileResponse {
+message GetFileResponse {
     string name = 1;
-    bytes content = 2;
+    bytes data = 2;
+}
+
+message MkDirRequest {
+    string dir = 1;
+}
+
+message MkDirResponse {
+    int32 depth = 1;
 }
 
 message LSRequest {
@@ -29,9 +47,19 @@ message GrepReponse {
     repeated string results = 1;
 }
 
+message TreeRequest {
+    string dir = 1;
+}
 
-service ChunkService {
-    rpc GetFile(FileRequest) returns (FileResponse);
+message TreeResponse {
+    string tree = 1;
+}
+
+service ClientService {
+    rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
+    rpc GetFile(GetFileRequest) returns (GetFileResponse);
+    rpc MkDir(MkDirRequest) returns (MkDirResponse);
     rpc LS(LSRequest) returns (LSResponse);
     rpc Grep(GrepRequest) returns (GrepReponse);
+    rpc Tree(TreeRequest) returns (TreeResponse);
 }
