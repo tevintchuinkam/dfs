@@ -1,10 +1,10 @@
-package chunks
+package grpc_chunks
 
 import (
 	"context"
 )
 
-type Server struct {
+type ChunkServer struct {
 	UnimplementedChunkServiceServer
 }
 
@@ -14,10 +14,10 @@ type Server struct {
 // 	mustEmbedUnimplementedChunkServiceServer()
 // }
 
-func (s *Server) StoreChunk(ctx context.Context, in *StoreChunkRequest) (*StoreChunkResponse, error) {
+func (s *ChunkServer) StoreChunk(ctx context.Context, in *StoreChunkRequest) (*StoreChunkResponse, error) {
 	return &StoreChunkResponse{}, nil
 }
 
-func (s *Server) GetChunk(in *GetChunkRequest, src ChunkService_GetChunkServer) error {
+func (s *ChunkServer) GetChunk(in *GetChunkRequest, src ChunkService_GetChunkServer) error {
 	return nil
 }

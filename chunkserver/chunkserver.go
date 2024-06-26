@@ -4,20 +4,20 @@ import (
 	"log"
 	"net"
 
-	"github.com/tevintchuinkam/tdfs/grpc/chunks"
+	"github.com/tevintchuinkam/tdfs/grpc/grpc_chunks"
 	"google.golang.org/grpc"
 )
 
 func main() {
 	// accept connections
 	port := ":9000"
-	lis, err := net.Listen("tcp", ":9000")
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatalf("failed to listen on port %s: %v", port, err)
+		log.Fatalf("failed to listen on port %s error=%v", port, err)
 	}
-	s := chunks.Server{}
+	s := grpc_chunks.ChunkServer{}
 	grpcServer := grpc.NewServer()
-	chunks.RegisterChunkServiceServer(grpcServer, &s)
+	grpc_chunks.RegisterChunkServiceServer(grpcServer, &s)
 	if err := grpcServer.Serve(lis); err != nil {
 		// https://www.youtube.com/watch?v=BdzYdN_Zd9Q
 	}

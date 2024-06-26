@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: metadata.proto
 
-package metadata
+package grpc_metadata
 
 import (
 	context "context"
@@ -35,7 +35,7 @@ func NewMetadataServiceClient(cc grpc.ClientConnInterface) MetadataServiceClient
 
 func (c *metadataServiceClient) GetMetadata(ctx context.Context, in *MetadataRequest, opts ...grpc.CallOption) (*MetadataResponse, error) {
 	out := new(MetadataResponse)
-	err := c.cc.Invoke(ctx, "/metadata.MetadataService/GetMetadata", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/grpc_metadata.MetadataService/GetMetadata", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func _MetadataService_GetMetadata_Handler(srv interface{}, ctx context.Context, 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/metadata.MetadataService/GetMetadata",
+		FullMethod: "/grpc_metadata.MetadataService/GetMetadata",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MetadataServiceServer).GetMetadata(ctx, req.(*MetadataRequest))
@@ -92,7 +92,7 @@ func _MetadataService_GetMetadata_Handler(srv interface{}, ctx context.Context, 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MetadataService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "metadata.MetadataService",
+	ServiceName: "grpc_metadata.MetadataService",
 	HandlerType: (*MetadataServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

@@ -1,0 +1,37 @@
+syntax = "proto3";
+option go_package = "./grpc_client";
+package grpc_client;
+
+message FileRequest {
+    string handle = 1;
+}
+
+message FileResponse {
+    string name = 1;
+    bytes content = 2;
+}
+
+message LSRequest {
+    string dir = 1;
+}
+
+message LSResponse {
+    repeated string files = 1;
+    repeated string dirs = 2;
+}
+
+message GrepRequest {
+    string pattern = 1;
+    string dir = 2;
+}
+
+message GrepReponse {
+    repeated string results = 1;
+}
+
+
+service ChunkService {
+    rpc GetFile(FileRequest) returns (FileResponse);
+    rpc LS(LSRequest) returns (LSResponse);
+    rpc Grep(GrepRequest) returns (GrepReponse);
+}

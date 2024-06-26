@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: chunks.proto
 
-package chunks
+package grpc_chunks
 
 import (
 	context "context"
@@ -36,7 +36,7 @@ func NewChunkServiceClient(cc grpc.ClientConnInterface) ChunkServiceClient {
 
 func (c *chunkServiceClient) StoreChunk(ctx context.Context, in *StoreChunkRequest, opts ...grpc.CallOption) (*StoreChunkResponse, error) {
 	out := new(StoreChunkResponse)
-	err := c.cc.Invoke(ctx, "/chunks.ChunkService/StoreChunk", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/grpc_chunks.ChunkService/StoreChunk", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (c *chunkServiceClient) StoreChunk(ctx context.Context, in *StoreChunkReque
 }
 
 func (c *chunkServiceClient) GetChunk(ctx context.Context, in *GetChunkRequest, opts ...grpc.CallOption) (ChunkService_GetChunkClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChunkService_ServiceDesc.Streams[0], "/chunks.ChunkService/GetChunk", opts...)
+	stream, err := c.cc.NewStream(ctx, &ChunkService_ServiceDesc.Streams[0], "/grpc_chunks.ChunkService/GetChunk", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func _ChunkService_StoreChunk_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/chunks.ChunkService/StoreChunk",
+		FullMethod: "/grpc_chunks.ChunkService/StoreChunk",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChunkServiceServer).StoreChunk(ctx, req.(*StoreChunkRequest))
@@ -150,7 +150,7 @@ func (x *chunkServiceGetChunkServer) Send(m *GetChunkReponse) error {
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChunkService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "chunks.ChunkService",
+	ServiceName: "grpc_chunks.ChunkService",
 	HandlerType: (*ChunkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

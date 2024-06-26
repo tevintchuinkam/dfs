@@ -1,4 +1,4 @@
-package metadata
+package grpc_metadata
 
 import (
 	"context"

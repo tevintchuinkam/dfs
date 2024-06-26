@@ -12,7 +12,7 @@ import (
 	"net"
 
 	"github.com/google/uuid"
-	"github.com/tevintchuinkam/tdfs/grpc/metadata"
+	"github.com/tevintchuinkam/tdfs/grpc/grpc_metadata"
 	"google.golang.org/grpc"
 )
 
@@ -23,9 +23,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen on port %s: %v", port, err)
 	}
-	s := metadata.Server{}
+	s := grpc_metadata.Server{}
 	grpcServer := grpc.NewServer()
-	metadata.RegisterMetadataServiceServer(grpcServer, &s)
+	grpc_metadata.RegisterMetadataServiceServer(grpcServer, &s)
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("metadata server failed to start: %v", err)
