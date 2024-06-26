@@ -1,6 +1,6 @@
 syntax = "proto3";
-option go_package = "./grpc_client";
-package grpc_client;
+option go_package = "./client";
+package client;
 
 message FileRequest {
     string handle = 1;

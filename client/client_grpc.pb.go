@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: client.proto
 
-package grpc_client
+package client
 
 import (
 	context "context"
@@ -37,7 +37,7 @@ func NewChunkServiceClient(cc grpc.ClientConnInterface) ChunkServiceClient {
 
 func (c *chunkServiceClient) GetFile(ctx context.Context, in *FileRequest, opts ...grpc.CallOption) (*FileResponse, error) {
 	out := new(FileResponse)
-	err := c.cc.Invoke(ctx, "/grpc_client.ChunkService/GetFile", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/client.ChunkService/GetFile", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *chunkServiceClient) GetFile(ctx context.Context, in *FileRequest, opts 
 
 func (c *chunkServiceClient) LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error) {
 	out := new(LSResponse)
-	err := c.cc.Invoke(ctx, "/grpc_client.ChunkService/LS", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/client.ChunkService/LS", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *chunkServiceClient) LS(ctx context.Context, in *LSRequest, opts ...grpc
 
 func (c *chunkServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error) {
 	out := new(GrepReponse)
-	err := c.cc.Invoke(ctx, "/grpc_client.ChunkService/Grep", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/client.ChunkService/Grep", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func _ChunkService_GetFile_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/grpc_client.ChunkService/GetFile",
+		FullMethod: "/client.ChunkService/GetFile",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChunkServiceServer).GetFile(ctx, req.(*FileRequest))
@@ -126,7 +126,7 @@ func _ChunkService_LS_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/grpc_client.ChunkService/LS",
+		FullMethod: "/client.ChunkService/LS",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChunkServiceServer).LS(ctx, req.(*LSRequest))
@@ -144,7 +144,7 @@ func _ChunkService_Grep_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/grpc_client.ChunkService/Grep",
+		FullMethod: "/client.ChunkService/Grep",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChunkServiceServer).Grep(ctx, req.(*GrepRequest))
@@ -156,7 +156,7 @@ func _ChunkService_Grep_Handler(srv interface{}, ctx context.Context, dec func(i
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChunkService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "grpc_client.ChunkService",
+	ServiceName: "client.ChunkService",
 	HandlerType: (*ChunkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

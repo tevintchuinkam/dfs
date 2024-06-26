@@ -1,6 +1,6 @@
 syntax = "proto3";
-option go_package = "./grpc_chunks";
-package grpc_chunks;
+option go_package = "./chunks";
+package chunks;
 
 message GetChunkRequest {
     string handle = 1;

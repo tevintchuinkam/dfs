@@ -1,8 +1,10 @@
-package main
+package metadata
 
 import (
+	context "context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path"
 	"strings"
 	"sync"
@@ -12,9 +14,16 @@ import (
 	"net"
 
 	"github.com/google/uuid"
-	"github.com/tevintchuinkam/tdfs/grpc/grpc_metadata"
 	"google.golang.org/grpc"
 )
+
+func (s *Server) GetMetadata(ctx context.Context, in *MetadataRequest) (*MetadataResponse, error) {
+	slog.Info("received chunk data request", "filename", in.Filename, "chunk_index", in.ChunkIndex)
+	return &MetadataResponse{
+		ChunkHandle: "abcde",
+		Url:         "chunk:9000",
+	}, nil
+}
 
 func main() {
 	// accept connections
@@ -23,9 +32,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen on port %s: %v", port, err)
 	}
-	s := grpc_metadata.Server{}
+	s := Server{}
 	grpcServer := grpc.NewServer()
-	grpc_metadata.RegisterMetadataServiceServer(grpcServer, &s)
+	RegisterMetadataServiceServer(grpcServer, &s)
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("metadata server failed to start: %v", err)
@@ -106,6 +115,7 @@ func (f *File) Read(b []byte) (int, error) {
 }
 
 type Server struct {
+	UnimplementedMetadataServiceServer
 	fileMap map[string][]chunkID
 	// map from chunk to chunk server address
 	chunkServers map[chunkID]ChunckServer
