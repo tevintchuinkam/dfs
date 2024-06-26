@@ -12,6 +12,15 @@ message MetadataResponse {
     string url = 2;
 }
 
+message LocRequest {
+    int64 fileSize = 1;
+}
+
+message LocResponse {
+    int32 port = 2;
+}
+
 service MetadataService {
     rpc GetMetadata(MetadataRequest) returns (MetadataResponse);
+    rpc GetStorageLocationRecommendation(LocRequest) returns (LocResponse);
 }

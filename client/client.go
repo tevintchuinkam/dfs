@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/tevintchuinkam/tdfs/metadata"
 	grpc "google.golang.org/grpc"
 )
 
@@ -14,12 +15,15 @@ var _ ClientServiceServer = (*Client)(nil)
 
 type Client struct {
 	UnimplementedClientServiceServer
-	port int
+	port    int
+	mdsPort int
 }
 
-func New(port int) *Client {
+func New(port int, mdsPort int) *Client {
+	// ping the server
 	return &Client{
-		port: port,
+		port:    port,
+		mdsPort: mdsPort,
 	}
 }
 
@@ -37,7 +41,20 @@ func (c *Client) Start() {
 	}
 }
 
+func (c *Client) newMDSClient() metadata.MetadataServiceClient {
+	var conn *grpc.ClientConn
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", c.mdsPort))
+	if err != nil {
+		log.Fatalf("could not connect. err: %v", err)
+	}
+	return metadata.NewMetadataServiceClient(conn)
+}
+
 func (c *Client) CreateFile(ctx context.Context, req *CreateFileRequest) (*CreateFileResponse, error) {
+	// ask the mds on on what storage server to store the file
+	client := c.newMDSClient()
+	client.GetStorageLocationRecommendation(context.Background(), &client.)
+	// send a createfilerequest to that server
 	return &CreateFileResponse{
 		BytesWritten: 0,
 	}, nil

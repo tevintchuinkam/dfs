@@ -37,7 +37,7 @@ func main() {
 	var clients []*client.Client
 	for range NUM_CLIENTS {
 		port++
-		c := client.New(port)
+		c := client.New(port, mds)
 		clients = append(clients, c)
 		go c.Start()
 	}
@@ -78,7 +78,6 @@ func main() {
 	fmt.Print(len(data))
 
 	c := clients[0]
-
 	for i := range 3 {
 		dir := fmt.Sprintf("dir-%d", i)
 		resp, err := c.MkDir(context.Background(), &client.MkDirRequest{
@@ -99,5 +98,17 @@ func main() {
 			})
 		}
 	}
+
+	resp, err := c.LS(context.Background(), &client.LSRequest{
+		Dir: "/",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("dirs: %v", resp.Dirs)
+	log.Printf("files: %v", resp.Files)
+
+	//  TODO GetFile, grep ...
+
 	// interact with the different clients to store and retreive some files
 }
