@@ -1,21 +1,34 @@
 package main
 
-import "github.com/tevintchuinkam/tdfs/chunks"
+import (
+	"time"
+
+	"github.com/tevintchuinkam/tdfs/chunks"
+	"github.com/tevintchuinkam/tdfs/metadata"
+)
 
 const (
-	NUM_CHUNK_SERVERS = 10
-	NUM_CLIENTS       = 10
+	META_DATA_SERVER_PORT = 5000
+	NUM_CHUNK_SERVERS     = 10
+	NUM_CLIENTS           = 10
 )
 
 func main() {
+	// create the metadata server
+	mds := metadata.New(META_DATA_SERVER_PORT)
+
 	// create a few chunks servers
 	for i := range NUM_CHUNK_SERVERS {
-		go chunks.New(5000 + i).Start()
+		port := META_DATA_SERVER_PORT + i + 1
+		go chunks.New(port).Start()
+		// wait until the server is up
+		time.Sleep(1 * time.Second)
+		if err := mds.RegisterChunkServer(port); err != nil {
+			panic(err)
+		}
+		
+
 	}
-
-	
-
-	// create the metadata server
 
 	// interact with the different clients to store and retreive some files
 }

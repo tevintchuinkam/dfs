@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"math/rand"
 	"path"
 	"strings"
 	"sync"
@@ -14,37 +15,61 @@ import (
 	"net"
 
 	"github.com/google/uuid"
+	"github.com/tevintchuinkam/tdfs/chunks"
 	"google.golang.org/grpc"
 )
 
-func (s *Server) GetMetadata(ctx context.Context, in *MetadataRequest) (*MetadataResponse, error) {
+func New(port int) *MetaDataServer {
+	return &MetaDataServer{
+		port: port,
+	}
+}
+
+func (s *MetaDataServer) Start() {
+	// accept connections
+	addr := fmt.Sprintf(":%d", s.port)
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("failed to listen on port %s: %v", addr, err)
+	}
+	grpcServer := grpc.NewServer()
+	RegisterMetadataServiceServer(grpcServer, s)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (s *MetaDataServer) RegisterChunkServer(port int) error {
+	// ping the server
+	var conn *grpc.ClientConn
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port))
+	if err != nil {
+		return fmt.Errorf("could not connect. err: %v", err)
+	}
+	defer conn.Close()
+	c := chunks.NewChunkServiceClient(conn)
+	// ping the server
+	challenge := rand.Int63()
+	resp, err := c.Ping(context.Background(), &chunks.PingRequest{Challenge: challenge})
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	if challenge != resp.Challenge {
+		return fmt.Errorf("chunk server failed challenge: %d !=  %d (expected)", resp.Challenge, challenge)
+	}
+	s.muChunk.Lock()
+	s.chunkServers = append(s.chunkServers, &c)
+	s.muChunk.Unlock()
+	return nil
+}
+
+func (s *MetaDataServer) GetMetadata(ctx context.Context, in *MetadataRequest) (*MetadataResponse, error) {
 	slog.Info("received chunk data request", "filename", in.Filename, "chunk_index", in.ChunkIndex)
 	return &MetadataResponse{
 		ChunkHandle: "abcde",
 		Url:         "chunk:9000",
 	}, nil
-}
-
-func main() {
-	// accept connections
-	port := ":9000"
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("failed to listen on port %s: %v", port, err)
-	}
-	s := Server{}
-	grpcServer := grpc.NewServer()
-	RegisterMetadataServiceServer(grpcServer, &s)
-
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("metadata server failed to start: %v", err)
-		// https://www.youtube.com/watch?v=BdzYdN_Zd9Q
-	}
-
-	// store the incoming files
-
-	// return the requested files
-
 }
 
 type directory struct {
@@ -114,14 +139,17 @@ func (f *File) Read(b []byte) (int, error) {
 	return 0, nil
 }
 
-type Server struct {
+type MetaDataServer struct {
 	UnimplementedMetadataServiceServer
-	fileMap map[string][]chunkID
+	port         int
+	muChunk      sync.Mutex
+	chunkServers []*chunks.ChunkServiceClient
+	fileMap      map[string][]chunkID
 	// map from chunk to chunk server address
-	chunkServers map[chunkID]ChunckServer
+	chunkLocation map[chunkID]*chunks.ChunkServiceClient
 }
 
-func (s Server) GetFile(filename string) (*File, error) {
+func (s MetaDataServer) GetFile(filename string) (*File, error) {
 	var fileChunks []chunkID
 	fileChunks, ok := s.fileMap[filename]
 	if !ok {
@@ -141,8 +169,7 @@ func (s Server) GetFile(filename string) (*File, error) {
 	return file, nil
 }
 
-func (s Server) GetChunk(id chunkID) (Chunck, error) {
-	_ = s.chunkServers[id].Port
+func (s MetaDataServer) GetChunk(id chunkID) (Chunck, error) {
 	return Chunck{}, nil
 }
 
@@ -159,7 +186,7 @@ type ChunckServer struct {
 type TDFS struct {
 	currentDir *directory
 	rootDir    *directory
-	server     Server
+	server     MetaDataServer
 	chunksize  int
 }
 
@@ -229,7 +256,7 @@ func (d *directory) WalkTo(p string) (*directory, error) {
 }
 
 // creates a new TDFS filesystem with the given base directory
-func New() *TDFS {
+func NewTDFS() *TDFS {
 	root := &directory{
 		name:    "",
 		prev:    nil,
@@ -239,9 +266,6 @@ func New() *TDFS {
 	return &TDFS{
 		currentDir: root,
 		rootDir:    root,
-		server: Server{
-			chunkServers: make(map[chunkID]ChunckServer),
-		},
-		chunksize: 1024,
+		chunksize:  1024,
 	}
 }

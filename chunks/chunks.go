@@ -9,15 +9,24 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
+// ensures that ChunkServer implements chunkServiceClient
+var _ ChunkServiceServer = (*ChunkServer)(nil)
+
 func New(port int) *ChunkServer {
 	return &ChunkServer{
-		addr: fmt.Sprintf(":%d", port),
+		port: port,
 	}
 }
 
 type ChunkServer struct {
 	UnimplementedChunkServiceServer
-	addr string
+	port int
+}
+
+func (s *ChunkServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse, error) {
+	return &PingResponse{
+		Challenge: req.Challenge,
+	}, nil
 }
 
 // required for grpc
@@ -26,16 +35,17 @@ func (s *ChunkServer) StoreChunk(ctx context.Context, in *StoreChunkRequest) (*S
 }
 
 // required for grpc
-func (s *ChunkServer) GetChunk(in *GetChunkRequest, src ChunkService_GetChunkServer) error {
-	return nil
+func (s *ChunkServer) GetChunk(ctx context.Context, in *GetChunkRequest) (*GetChunkReponse, error) {
+	return nil, nil
 }
 
 // if all goes well, this function will not return
 func (s *ChunkServer) Start() {
 	// accept connections
-	lis, err := net.Listen("tcp", s.addr)
+	addr := fmt.Sprintf(":%d", s.port)
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("failed to listen on port %s error=%v", s.addr, err)
+		log.Fatalf("failed to listen on port %s error=%v", addr, err)
 	}
 	grpcServer := grpc.NewServer()
 	RegisterChunkServiceServer(grpcServer, s)
