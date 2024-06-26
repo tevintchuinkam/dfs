@@ -13,15 +13,15 @@ import (
 	"log"
 	"net"
 
-	"github.com/tevintchuinkam/tdfs/chunks"
+	"github.com/tevintchuinkam/tdfs/files"
 	"google.golang.org/grpc"
 )
 
-// ensures that ChunkServer implements chunkServiceClient
+// ensures that FileServer implements chunkServiceClient
 var _ MetadataServiceServer = (*MetaDataServer)(nil)
 
 type chunkServer struct {
-	client *chunks.ChunkServiceClient
+	client *files.FileServiceClient
 	port   int
 
 	// how many bytes are stored in the given
@@ -32,11 +32,11 @@ type chunkServer struct {
 type MetaDataServer struct {
 	UnimplementedMetadataServiceServer
 	port         int
-	muChunk      sync.Mutex
+	muFile       sync.Mutex
 	chunkServers []*chunkServer
 	rootDir      directory
-	// map from chunk to chunk server address
-	fileLocation map[string]chunkServer
+	// map from file to file server address
+	fileLocation map[string]*chunkServer
 }
 
 func New(port int) *MetaDataServer {
@@ -59,7 +59,7 @@ func (s *MetaDataServer) Start() {
 	}
 }
 
-func (s *MetaDataServer) RegisterChunkServer(port int) error {
+func (s *MetaDataServer) RegisterFileServer(port int) error {
 	// ping the server
 	var conn *grpc.ClientConn
 	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port))
@@ -67,37 +67,29 @@ func (s *MetaDataServer) RegisterChunkServer(port int) error {
 		return fmt.Errorf("could not connect. err: %v", err)
 	}
 	defer conn.Close()
-	c := chunks.NewChunkServiceClient(conn)
+	c := files.NewFileServiceClient(conn)
 	// ping the server
 	challenge := rand.Int63()
-	resp, err := c.Ping(context.Background(), &chunks.PingRequest{Challenge: challenge})
+	resp, err := c.Ping(context.Background(), &files.PingRequest{Challenge: challenge})
 	if err != nil {
 		slog.Error(err.Error())
 		return err
 	}
 	if challenge != resp.Challenge {
-		return fmt.Errorf("chunk server failed challenge: %d !=  %d (expected)", resp.Challenge, challenge)
+		return fmt.Errorf("file server failed challenge: %d !=  %d (expected)", resp.Challenge, challenge)
 	}
-	s.muChunk.Lock()
+	s.muFile.Lock()
 	srv := new(chunkServer)
 	srv.client = &c
 	srv.port = port
 	s.chunkServers = append(s.chunkServers, srv)
-	s.muChunk.Unlock()
+	s.muFile.Unlock()
 	return nil
 }
 
-func (s *MetaDataServer) GetMetadata(ctx context.Context, in *MetadataRequest) (*MetadataResponse, error) {
-	slog.Info("received chunk data request", "filename", in.Filename, "chunk_index", in.ChunkIndex)
-	return &MetadataResponse{
-		ChunkHandle: "abcde",
-		Url:         "chunk:9000",
-	}, nil
-}
-
-func (s *MetaDataServer) GetStorageLocationRecommendation(ctx context.Context, req *LocRequest) (*LocResponse, error) {
+func (s *MetaDataServer) GetStorageLocationRecommendation(ctx context.Context, req *RecRequest) (*RecResponse, error) {
 	if len(s.chunkServers) == 0 {
-		return nil, errors.New("no chunk servers have been registered")
+		return nil, errors.New("no file servers have been registered")
 	}
 	minLoad := -1
 	port := s.chunkServers[0].port
@@ -106,8 +98,19 @@ func (s *MetaDataServer) GetStorageLocationRecommendation(ctx context.Context, r
 			port = s.port
 		}
 	}
-	return &LocResponse{
+	return &RecResponse{
 		Port: int32(port),
+	}, nil
+}
+
+func (s *MetaDataServer) GetLocation(ctx context.Context, req *LocRequest) (*LocResponse, error) {
+	fullPath := path.Join(req.Dir, req.Filename)
+	cs, ok := s.fileLocation[fullPath]
+	if !ok {
+		return nil, fmt.Errorf("the file %s doesn't exist", fullPath)
+	}
+	return &LocResponse{
+		Port: int32(cs.port),
 	}, nil
 }
 

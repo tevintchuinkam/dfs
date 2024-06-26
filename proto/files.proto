@@ -1,0 +1,45 @@
+syntax = "proto3";
+option go_package = "./files";
+package files;
+
+message PingRequest {
+    int64 challenge = 1;
+}
+
+message PingResponse {
+    int64 challenge = 1;
+}
+
+message GetFileRequest {
+    string name = 1;
+    string dir = 2;
+}
+
+message GetFileReponse {
+    bytes data = 1;
+}
+
+message StoreFileRequest {
+    bytes body = 1;
+}
+
+message StoreFileResponse {
+    string err = 1;
+}
+
+message CreateFileRequest {
+    string name =  1;
+    string dir = 2;
+    bytes data = 3;
+}
+
+message CreateFileResponse {
+    int64 bytesWritten = 1;
+}
+
+service FileService {
+    rpc Ping(PingRequest) returns (PingResponse);
+    rpc StoreFile(StoreFileRequest) returns (StoreFileResponse);
+    rpc GetFile(GetFileRequest) returns (GetFileReponse);
+    rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
+}

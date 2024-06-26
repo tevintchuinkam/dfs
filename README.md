@@ -5,13 +5,13 @@ It implements ideas from the Lustre Metadata Prefetching Algorithm and the POSH 
 
 ## Design
 
-TDFS is designed to have one master who keeps track of file chucks locations in memory. The file chunks are stored in chunk servers.
+TDFS is designed to have one master who keeps track of file chucks locations in memory. The file files are stored in file servers.
 
 ### Master
 
-### Chunk Server
+### File Server
 
-### Chunks
+### Files
 
 ## Optimizations
 

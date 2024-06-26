@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/tevintchuinkam/tdfs/chunks"
 	"github.com/tevintchuinkam/tdfs/client"
+	"github.com/tevintchuinkam/tdfs/files"
 	"github.com/tevintchuinkam/tdfs/metadata"
 )
 
@@ -22,14 +22,14 @@ func main() {
 	// create the metadata server
 	mds := metadata.New(META_DATA_SERVER_PORT)
 
-	// create a few chunks servers
+	// create a few files servers
 	var port int
 	for i := range NUM_CHUNK_SERVERS {
 		port = META_DATA_SERVER_PORT + i + 1
-		go chunks.New(port).Start()
+		go files.New(port).Start()
 		// wait until the server is up
 		time.Sleep(2 * time.Second)
-		if err := mds.RegisterChunkServer(port); err != nil {
+		if err := mds.RegisterFileServer(port); err != nil {
 			panic(err)
 		}
 	}
@@ -37,7 +37,7 @@ func main() {
 	var clients []*client.Client
 	for range NUM_CLIENTS {
 		port++
-		c := client.New(port, mds)
+		c := client.New(port, META_DATA_SERVER_PORT)
 		clients = append(clients, c)
 		go c.Start()
 	}

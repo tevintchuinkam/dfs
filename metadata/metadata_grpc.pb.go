@@ -22,8 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetadataServiceClient interface {
-	GetMetadata(ctx context.Context, in *MetadataRequest, opts ...grpc.CallOption) (*MetadataResponse, error)
-	GetStorageLocationRecommendation(ctx context.Context, in *LocRequest, opts ...grpc.CallOption) (*LocResponse, error)
+	GetStorageLocationRecommendation(ctx context.Context, in *RecRequest, opts ...grpc.CallOption) (*RecResponse, error)
+	GetLocation(ctx context.Context, in *LocRequest, opts ...grpc.CallOption) (*LocResponse, error)
 }
 
 type metadataServiceClient struct {
@@ -34,18 +34,18 @@ func NewMetadataServiceClient(cc grpc.ClientConnInterface) MetadataServiceClient
 	return &metadataServiceClient{cc}
 }
 
-func (c *metadataServiceClient) GetMetadata(ctx context.Context, in *MetadataRequest, opts ...grpc.CallOption) (*MetadataResponse, error) {
-	out := new(MetadataResponse)
-	err := c.cc.Invoke(ctx, "/metadata.MetadataService/GetMetadata", in, out, opts...)
+func (c *metadataServiceClient) GetStorageLocationRecommendation(ctx context.Context, in *RecRequest, opts ...grpc.CallOption) (*RecResponse, error) {
+	out := new(RecResponse)
+	err := c.cc.Invoke(ctx, "/metadata.MetadataService/GetStorageLocationRecommendation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *metadataServiceClient) GetStorageLocationRecommendation(ctx context.Context, in *LocRequest, opts ...grpc.CallOption) (*LocResponse, error) {
+func (c *metadataServiceClient) GetLocation(ctx context.Context, in *LocRequest, opts ...grpc.CallOption) (*LocResponse, error) {
 	out := new(LocResponse)
-	err := c.cc.Invoke(ctx, "/metadata.MetadataService/GetStorageLocationRecommendation", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/metadata.MetadataService/GetLocation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func (c *metadataServiceClient) GetStorageLocationRecommendation(ctx context.Con
 // All implementations must embed UnimplementedMetadataServiceServer
 // for forward compatibility
 type MetadataServiceServer interface {
-	GetMetadata(context.Context, *MetadataRequest) (*MetadataResponse, error)
-	GetStorageLocationRecommendation(context.Context, *LocRequest) (*LocResponse, error)
+	GetStorageLocationRecommendation(context.Context, *RecRequest) (*RecResponse, error)
+	GetLocation(context.Context, *LocRequest) (*LocResponse, error)
 	mustEmbedUnimplementedMetadataServiceServer()
 }
 
@@ -65,11 +65,11 @@ type MetadataServiceServer interface {
 type UnimplementedMetadataServiceServer struct {
 }
 
-func (UnimplementedMetadataServiceServer) GetMetadata(context.Context, *MetadataRequest) (*MetadataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
-}
-func (UnimplementedMetadataServiceServer) GetStorageLocationRecommendation(context.Context, *LocRequest) (*LocResponse, error) {
+func (UnimplementedMetadataServiceServer) GetStorageLocationRecommendation(context.Context, *RecRequest) (*RecResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStorageLocationRecommendation not implemented")
+}
+func (UnimplementedMetadataServiceServer) GetLocation(context.Context, *LocRequest) (*LocResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLocation not implemented")
 }
 func (UnimplementedMetadataServiceServer) mustEmbedUnimplementedMetadataServiceServer() {}
 
@@ -84,26 +84,8 @@ func RegisterMetadataServiceServer(s grpc.ServiceRegistrar, srv MetadataServiceS
 	s.RegisterService(&MetadataService_ServiceDesc, srv)
 }
 
-func _MetadataService_GetMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MetadataRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MetadataServiceServer).GetMetadata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/metadata.MetadataService/GetMetadata",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetadataServiceServer).GetMetadata(ctx, req.(*MetadataRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MetadataService_GetStorageLocationRecommendation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LocRequest)
+	in := new(RecRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -115,7 +97,25 @@ func _MetadataService_GetStorageLocationRecommendation_Handler(srv interface{}, 
 		FullMethod: "/metadata.MetadataService/GetStorageLocationRecommendation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetadataServiceServer).GetStorageLocationRecommendation(ctx, req.(*LocRequest))
+		return srv.(MetadataServiceServer).GetStorageLocationRecommendation(ctx, req.(*RecRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MetadataService_GetLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LocRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetadataServiceServer).GetLocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/metadata.MetadataService/GetLocation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetadataServiceServer).GetLocation(ctx, req.(*LocRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -128,12 +128,12 @@ var MetadataService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MetadataServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetMetadata",
-			Handler:    _MetadataService_GetMetadata_Handler,
-		},
-		{
 			MethodName: "GetStorageLocationRecommendation",
 			Handler:    _MetadataService_GetStorageLocationRecommendation_Handler,
+		},
+		{
+			MethodName: "GetLocation",
+			Handler:    _MetadataService_GetLocation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -2,25 +2,24 @@ syntax = "proto3";
 option go_package = "./metadata";
 package metadata;
 
-message MetadataRequest {
-    string filename = 1;
-    int64 chunkIndex = 2;
-}
-
-message MetadataResponse {
-    string chunkHandle = 1;
-    string url = 2;
-}
-
-message LocRequest {
+message RecRequest {
     int64 fileSize = 1;
 }
 
-message LocResponse {
+message RecResponse {
     int32 port = 2;
 }
 
+message LocRequest {
+    string filename =  1;
+    string dir = 2;
+}
+
+message LocResponse {
+    int32 port =  1; 
+}
+
 service MetadataService {
-    rpc GetMetadata(MetadataRequest) returns (MetadataResponse);
-    rpc GetStorageLocationRecommendation(LocRequest) returns (LocResponse);
+    rpc GetStorageLocationRecommendation(RecRequest) returns (RecResponse);
+    rpc GetLocation(LocRequest) returns (LocResponse);
 }

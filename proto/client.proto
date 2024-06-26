@@ -13,12 +13,12 @@ message CreateFileResponse {
 }
 
 message GetFileRequest {
-    string handle = 1;
+    string name = 1;
+    string dir = 2;
 }
 
 message GetFileResponse {
-    string name = 1;
-    bytes data = 2;
+    bytes data = 1;
 }
 
 message MkDirRequest {
