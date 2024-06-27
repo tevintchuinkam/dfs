@@ -23,11 +23,13 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ClientServiceClient interface {
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
-	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
+	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
 	MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error)
-	LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error)
-	Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error)
-	Tree(ctx context.Context, in *TreeRequest, opts ...grpc.CallOption) (*TreeResponse, error)
+	// ...
+	ReadDir(ctx context.Context, in *ReadDirRequest, opts ...grpc.CallOption) (*ReadDirResponse, error)
+	Stat(ctx context.Context, in *StatRequest, opts ...grpc.CallOption) (*StatResponse, error)
+	Open(ctx context.Context, in *OpenRequest, opts ...grpc.CallOption) (*OpenConfirmation, error)
+	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseConfirmation, error)
 }
 
 type clientServiceClient struct {
@@ -47,9 +49,9 @@ func (c *clientServiceClient) CreateFile(ctx context.Context, in *CreateFileRequ
 	return out, nil
 }
 
-func (c *clientServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
-	out := new(GetFileResponse)
-	err := c.cc.Invoke(ctx, "/client.ClientService/GetFile", in, out, opts...)
+func (c *clientServiceClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error) {
+	out := new(ReadFileResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/ReadFile", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,27 +67,36 @@ func (c *clientServiceClient) MkDir(ctx context.Context, in *MkDirRequest, opts 
 	return out, nil
 }
 
-func (c *clientServiceClient) LS(ctx context.Context, in *LSRequest, opts ...grpc.CallOption) (*LSResponse, error) {
-	out := new(LSResponse)
-	err := c.cc.Invoke(ctx, "/client.ClientService/LS", in, out, opts...)
+func (c *clientServiceClient) ReadDir(ctx context.Context, in *ReadDirRequest, opts ...grpc.CallOption) (*ReadDirResponse, error) {
+	out := new(ReadDirResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/ReadDir", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *clientServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepReponse, error) {
-	out := new(GrepReponse)
-	err := c.cc.Invoke(ctx, "/client.ClientService/Grep", in, out, opts...)
+func (c *clientServiceClient) Stat(ctx context.Context, in *StatRequest, opts ...grpc.CallOption) (*StatResponse, error) {
+	out := new(StatResponse)
+	err := c.cc.Invoke(ctx, "/client.ClientService/Stat", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *clientServiceClient) Tree(ctx context.Context, in *TreeRequest, opts ...grpc.CallOption) (*TreeResponse, error) {
-	out := new(TreeResponse)
-	err := c.cc.Invoke(ctx, "/client.ClientService/Tree", in, out, opts...)
+func (c *clientServiceClient) Open(ctx context.Context, in *OpenRequest, opts ...grpc.CallOption) (*OpenConfirmation, error) {
+	out := new(OpenConfirmation)
+	err := c.cc.Invoke(ctx, "/client.ClientService/Open", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clientServiceClient) Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseConfirmation, error) {
+	out := new(CloseConfirmation)
+	err := c.cc.Invoke(ctx, "/client.ClientService/Close", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +108,13 @@ func (c *clientServiceClient) Tree(ctx context.Context, in *TreeRequest, opts ..
 // for forward compatibility
 type ClientServiceServer interface {
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
-	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
+	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
 	MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error)
-	LS(context.Context, *LSRequest) (*LSResponse, error)
-	Grep(context.Context, *GrepRequest) (*GrepReponse, error)
-	Tree(context.Context, *TreeRequest) (*TreeResponse, error)
+	// ...
+	ReadDir(context.Context, *ReadDirRequest) (*ReadDirResponse, error)
+	Stat(context.Context, *StatRequest) (*StatResponse, error)
+	Open(context.Context, *OpenRequest) (*OpenConfirmation, error)
+	Close(context.Context, *CloseRequest) (*CloseConfirmation, error)
 	mustEmbedUnimplementedClientServiceServer()
 }
 
@@ -112,20 +125,23 @@ type UnimplementedClientServiceServer struct {
 func (UnimplementedClientServiceServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
 }
-func (UnimplementedClientServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetFile not implemented")
+func (UnimplementedClientServiceServer) ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadFile not implemented")
 }
 func (UnimplementedClientServiceServer) MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MkDir not implemented")
 }
-func (UnimplementedClientServiceServer) LS(context.Context, *LSRequest) (*LSResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LS not implemented")
+func (UnimplementedClientServiceServer) ReadDir(context.Context, *ReadDirRequest) (*ReadDirResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadDir not implemented")
 }
-func (UnimplementedClientServiceServer) Grep(context.Context, *GrepRequest) (*GrepReponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Grep not implemented")
+func (UnimplementedClientServiceServer) Stat(context.Context, *StatRequest) (*StatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Stat not implemented")
 }
-func (UnimplementedClientServiceServer) Tree(context.Context, *TreeRequest) (*TreeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Tree not implemented")
+func (UnimplementedClientServiceServer) Open(context.Context, *OpenRequest) (*OpenConfirmation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Open not implemented")
+}
+func (UnimplementedClientServiceServer) Close(context.Context, *CloseRequest) (*CloseConfirmation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
 }
 func (UnimplementedClientServiceServer) mustEmbedUnimplementedClientServiceServer() {}
 
@@ -158,20 +174,20 @@ func _ClientService_CreateFile_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ClientService_GetFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetFileRequest)
+func _ClientService_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadFileRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClientServiceServer).GetFile(ctx, in)
+		return srv.(ClientServiceServer).ReadFile(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ClientService/GetFile",
+		FullMethod: "/client.ClientService/ReadFile",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClientServiceServer).GetFile(ctx, req.(*GetFileRequest))
+		return srv.(ClientServiceServer).ReadFile(ctx, req.(*ReadFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -194,56 +210,74 @@ func _ClientService_MkDir_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ClientService_LS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LSRequest)
+func _ClientService_ReadDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadDirRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClientServiceServer).LS(ctx, in)
+		return srv.(ClientServiceServer).ReadDir(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ClientService/LS",
+		FullMethod: "/client.ClientService/ReadDir",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClientServiceServer).LS(ctx, req.(*LSRequest))
+		return srv.(ClientServiceServer).ReadDir(ctx, req.(*ReadDirRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ClientService_Grep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GrepRequest)
+func _ClientService_Stat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClientServiceServer).Grep(ctx, in)
+		return srv.(ClientServiceServer).Stat(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ClientService/Grep",
+		FullMethod: "/client.ClientService/Stat",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClientServiceServer).Grep(ctx, req.(*GrepRequest))
+		return srv.(ClientServiceServer).Stat(ctx, req.(*StatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ClientService_Tree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TreeRequest)
+func _ClientService_Open_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClientServiceServer).Tree(ctx, in)
+		return srv.(ClientServiceServer).Open(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/client.ClientService/Tree",
+		FullMethod: "/client.ClientService/Open",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClientServiceServer).Tree(ctx, req.(*TreeRequest))
+		return srv.(ClientServiceServer).Open(ctx, req.(*OpenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ClientService_Close_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClientServiceServer).Close(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/client.ClientService/Close",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClientServiceServer).Close(ctx, req.(*CloseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -260,24 +294,28 @@ var ClientService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ClientService_CreateFile_Handler,
 		},
 		{
-			MethodName: "GetFile",
-			Handler:    _ClientService_GetFile_Handler,
+			MethodName: "ReadFile",
+			Handler:    _ClientService_ReadFile_Handler,
 		},
 		{
 			MethodName: "MkDir",
 			Handler:    _ClientService_MkDir_Handler,
 		},
 		{
-			MethodName: "LS",
-			Handler:    _ClientService_LS_Handler,
+			MethodName: "ReadDir",
+			Handler:    _ClientService_ReadDir_Handler,
 		},
 		{
-			MethodName: "Grep",
-			Handler:    _ClientService_Grep_Handler,
+			MethodName: "Stat",
+			Handler:    _ClientService_Stat_Handler,
 		},
 		{
-			MethodName: "Tree",
-			Handler:    _ClientService_Tree_Handler,
+			MethodName: "Open",
+			Handler:    _ClientService_Open_Handler,
+		},
+		{
+			MethodName: "Close",
+			Handler:    _ClientService_Close_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -104,7 +104,7 @@ func (s *MetaDataServer) GetStorageLocationRecommendation(ctx context.Context, r
 }
 
 func (s *MetaDataServer) GetLocation(ctx context.Context, req *LocRequest) (*LocResponse, error) {
-	fullPath := path.Join(req.Dir, req.Filename)
+	fullPath := path.Clean(req.Name)
 	cs, ok := s.fileLocation[fullPath]
 	if !ok {
 		return nil, fmt.Errorf("the file %s doesn't exist", fullPath)

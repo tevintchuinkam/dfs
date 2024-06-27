@@ -12,12 +12,11 @@ message CreateFileResponse {
     int64 bytesWritten = 1;
 }
 
-message GetFileRequest {
+message ReadFileRequest {
     string name = 1;
-    string dir = 2;
 }
 
-message GetFileResponse {
+message ReadFileResponse {
     bytes data = 1;
 }
 
@@ -29,37 +28,52 @@ message MkDirResponse {
     int32 depth = 1;
 }
 
-message LSRequest {
+message StatRequest {
+    string name = 1;
+}
+
+message StatResponse {
+    string name = 1;
+    int64 size = 2;
+    int32 mode = 3;
+    int64 modTime = 4;
+    bool isDir = 5;
+}
+
+message ReadDirRequest {
     string dir = 1;
 }
 
-message LSResponse {
-    repeated string files = 1;
-    repeated string dirs = 2;
+message DirEntry {
+    string name = 1;
+    bool isDir = 2;
+    int32 fileMode = 3;
 }
 
-message GrepRequest {
-    string pattern = 1;
-    string dir = 2;
+message ReadDirResponse {
+    repeated DirEntry contents = 1;
 }
 
-message GrepReponse {
-    repeated string results = 1;
+message OpenRequest {
+    string name = 1;
 }
 
-message TreeRequest {
-    string dir = 1;
+message OpenConfirmation {}
+
+message CloseRequest {
+    string name = 1;
 }
 
-message TreeResponse {
-    string tree = 1;
-}
+message CloseConfirmation{}
 
 service ClientService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
-    rpc GetFile(GetFileRequest) returns (GetFileResponse);
+    rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
     rpc MkDir(MkDirRequest) returns (MkDirResponse);
-    rpc LS(LSRequest) returns (LSResponse);
-    rpc Grep(GrepRequest) returns (GrepReponse);
-    rpc Tree(TreeRequest) returns (TreeResponse);
+
+    // ... 
+    rpc ReadDir(ReadDirRequest) returns (ReadDirResponse);
+    rpc Stat(StatRequest) returns (StatResponse);
+    rpc Open(OpenRequest) returns (OpenConfirmation);
+    rpc Close(CloseRequest) returns (CloseConfirmation);
 }

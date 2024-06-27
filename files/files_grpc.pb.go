@@ -24,7 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type FileServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	StoreFile(ctx context.Context, in *StoreFileRequest, opts ...grpc.CallOption) (*StoreFileResponse, error)
-	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileReponse, error)
+	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*File, error)
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 }
 
@@ -54,8 +54,8 @@ func (c *fileServiceClient) StoreFile(ctx context.Context, in *StoreFileRequest,
 	return out, nil
 }
 
-func (c *fileServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileReponse, error) {
-	out := new(GetFileReponse)
+func (c *fileServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*File, error) {
+	out := new(File)
 	err := c.cc.Invoke(ctx, "/files.FileService/GetFile", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileReques
 type FileServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error)
-	GetFile(context.Context, *GetFileRequest) (*GetFileReponse, error)
+	GetFile(context.Context, *GetFileRequest) (*File, error)
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
@@ -93,7 +93,7 @@ func (UnimplementedFileServiceServer) Ping(context.Context, *PingRequest) (*Ping
 func (UnimplementedFileServiceServer) StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StoreFile not implemented")
 }
-func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileReponse, error) {
+func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) (*File, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFile not implemented")
 }
 func (UnimplementedFileServiceServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {

@@ -15,7 +15,7 @@ message GetFileRequest {
     string dir = 2;
 }
 
-message GetFileReponse {
+message File {
     bytes data = 1;
 }
 
@@ -40,6 +40,6 @@ message CreateFileResponse {
 service FileService {
     rpc Ping(PingRequest) returns (PingResponse);
     rpc StoreFile(StoreFileRequest) returns (StoreFileResponse);
-    rpc GetFile(GetFileRequest) returns (GetFileReponse);
+    rpc GetFile(GetFileRequest) returns (File);
     rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
 }

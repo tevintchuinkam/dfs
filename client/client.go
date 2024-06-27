@@ -43,6 +43,11 @@ func (c *Client) Start() {
 	}
 }
 
+func (c *Client) Open(ctx context.Context, req *OpenRequest) (*OpenConfirmation, error) {
+	c.newFileServiceClient(0)
+	return nil, nil
+}
+
 func (c *Client) newMDSClient() metadata.MetadataServiceClient {
 	var conn *grpc.ClientConn
 	conn, err := grpc.NewClient(fmt.Sprintf(":%d", c.mdsPort))
@@ -88,11 +93,10 @@ func (c *Client) CreateFile(ctx context.Context, req *CreateFileRequest) (*Creat
 	}, nil
 }
 
-func (c *Client) GetFile(ctx context.Context, req *GetFileRequest) (*GetFileResponse, error) {
+func (c *Client) GetFile(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
 	mds := c.newMDSClient()
 	loc, err := mds.GetLocation(context.Background(), &metadata.LocRequest{
-		Filename: req.Name,
-		Dir:      req.Dir,
+		Name: req.Name,
 	})
 
 	if err != nil {
@@ -102,38 +106,12 @@ func (c *Client) GetFile(ctx context.Context, req *GetFileRequest) (*GetFileResp
 	fs := c.newFileServiceClient(loc.Port)
 	fr, err := fs.GetFile(ctx, &files.GetFileRequest{
 		Name: req.Name,
-		Dir:  req.Dir,
 	})
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err
 	}
-	return &GetFileResponse{
+	return &ReadFileResponse{
 		Data: fr.Data,
-	}, nil
-}
-
-func (c *Client) MkDir(ctx context.Context, req *MkDirRequest) (*MkDirResponse, error) {
-	return &MkDirResponse{
-		Depth: 1,
-	}, nil
-}
-
-func (c *Client) Grep(ctx context.Context, req *GrepRequest) (*GrepReponse, error) {
-	return &GrepReponse{
-		Results: []string{},
-	}, nil
-}
-
-func (c *Client) LS(ctx context.Context, req *LSRequest) (*LSResponse, error) {
-	return &LSResponse{
-		Files: []string{},
-		Dirs:  []string{},
-	}, nil
-}
-
-func (c *Client) Tree(ctx context.Context, req *TreeRequest) (*TreeResponse, error) {
-	return &TreeResponse{
-		Tree: "-",
 	}, nil
 }

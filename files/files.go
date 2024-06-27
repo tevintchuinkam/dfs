@@ -35,7 +35,7 @@ func (s *FileServer) StoreFile(ctx context.Context, in *StoreFileRequest) (*Stor
 }
 
 // required for grpc
-func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*GetFileReponse, error) {
+func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*File, error) {
 	return nil, nil
 }
 
