@@ -93,19 +93,25 @@ func (s *MetaDataServer) RegisterFileServer(port int) error {
 	return nil
 }
 
+// assumes the client will indeed write the data to the given client
 func (s *MetaDataServer) GetStorageLocationRecommendation(ctx context.Context, req *RecRequest) (*RecResponse, error) {
 	if len(s.chunkServers) == 0 {
 		return nil, errors.New("no file servers have been registered")
 	}
-	minLoad := -1
-	port := s.chunkServers[0].port
+	min := s.chunkServers[0]
+	minLoad := min.load
 	for _, s := range s.chunkServers {
+		s.mu.Lock()
 		if s.load < minLoad {
-			port = s.port
+			min = s
 		}
+		s.mu.Unlock()
 	}
+	min.mu.Lock()
+	min.load += int(req.FileSize)
+	min.mu.Unlock()
 	return &RecResponse{
-		Port: int32(port),
+		Port: int32(min.port),
 	}, nil
 }
 

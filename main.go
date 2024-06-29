@@ -54,7 +54,7 @@ func main() {
 	// interact with the different clients to store and retreive some files
 
 	// create files
-	for i := range 3 {
+	for i := range 20 {
 		r, err := c.CreateFile(context.TODO(), &client.CreateFileRequest{
 			Name: fmt.Sprintf("file-%d", i+1),
 			Data: data,
