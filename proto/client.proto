@@ -4,8 +4,7 @@ package client;
 
 message CreateFileRequest {
     string name = 1;
-    string dir = 2;
-    bytes data = 3;
+    bytes data = 2;
 }
 
 message CreateFileResponse {

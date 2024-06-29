@@ -10,7 +10,12 @@ import (
 	"github.com/tevintchuinkam/tdfs/files"
 	"github.com/tevintchuinkam/tdfs/metadata"
 	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+}
 
 // ensures that FileServer implements chunkServiceClient
 var _ ClientServiceServer = (*Client)(nil)
@@ -50,7 +55,7 @@ func (c *Client) Open(ctx context.Context, req *OpenRequest) (*OpenConfirmation,
 
 func (c *Client) newMDSClient() metadata.MetadataServiceClient {
 	var conn *grpc.ClientConn
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", c.mdsPort))
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", c.mdsPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect. err: %v", err)
 	}
@@ -59,7 +64,7 @@ func (c *Client) newMDSClient() metadata.MetadataServiceClient {
 
 func (c *Client) newFileServiceClient(port int32) files.FileServiceClient {
 	var conn *grpc.ClientConn
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port))
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("could not connect. err: %v", err)
 	}
@@ -73,17 +78,16 @@ func (c *Client) CreateFile(ctx context.Context, req *CreateFileRequest) (*Creat
 		FileSize: int64(len(req.Data)),
 	})
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("getting storage location recommendation failed", "err", err.Error())
 		return nil, err
 	}
 	fs := c.newFileServiceClient(rec.Port)
 	fr, err := fs.CreateFile(ctx, &files.CreateFileRequest{
 		Name: req.Name,
-		Dir:  req.Dir,
 		Data: req.Data,
 	})
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("creating file failed", "err", err.Error())
 		return nil, err
 	}
 

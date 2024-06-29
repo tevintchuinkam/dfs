@@ -5,22 +5,30 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"path"
 
 	grpc "google.golang.org/grpc"
 )
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+}
 
 // ensures that FileServer implements chunkServiceClient
 var _ FileServiceServer = (*FileServer)(nil)
 
 func New(port int) *FileServer {
 	return &FileServer{
-		port: port,
+		port:    port,
+		rootDir: path.Join("./", "dfs", fmt.Sprint(port)),
 	}
 }
 
 type FileServer struct {
 	UnimplementedFileServiceServer
-	port int
+	port    int
+	rootDir string
 }
 
 func (s *FileServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse, error) {
@@ -30,8 +38,21 @@ func (s *FileServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse,
 }
 
 // required for grpc
-func (s *FileServer) StoreFile(ctx context.Context, in *StoreFileRequest) (*StoreFileResponse, error) {
-	return &StoreFileResponse{}, nil
+func (s *FileServer) CreateFile(ctx context.Context, in *CreateFileRequest) (*CreateFileResponse, error) {
+	// file server uses his own port as dir name
+	if err := os.MkdirAll(path.Join(s.rootDir, path.Dir(in.Name)), os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	p := path.Join(s.rootDir, in.Name)
+	file, err := os.Create(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+	written, err := file.Write(in.Data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &CreateFileResponse{BytesWritten: int64(written)}, nil
 }
 
 // required for grpc

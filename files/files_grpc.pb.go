@@ -23,7 +23,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FileServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	StoreFile(ctx context.Context, in *StoreFileRequest, opts ...grpc.CallOption) (*StoreFileResponse, error)
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*File, error)
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 }
@@ -39,15 +38,6 @@ func NewFileServiceClient(cc grpc.ClientConnInterface) FileServiceClient {
 func (c *fileServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
 	err := c.cc.Invoke(ctx, "/files.FileService/Ping", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *fileServiceClient) StoreFile(ctx context.Context, in *StoreFileRequest, opts ...grpc.CallOption) (*StoreFileResponse, error) {
-	out := new(StoreFileResponse)
-	err := c.cc.Invoke(ctx, "/files.FileService/StoreFile", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +67,6 @@ func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileReques
 // for forward compatibility
 type FileServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error)
 	GetFile(context.Context, *GetFileRequest) (*File, error)
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
@@ -89,9 +78,6 @@ type UnimplementedFileServiceServer struct {
 
 func (UnimplementedFileServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
-}
-func (UnimplementedFileServiceServer) StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StoreFile not implemented")
 }
 func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) (*File, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFile not implemented")
@@ -126,24 +112,6 @@ func _FileService_Ping_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FileServiceServer).Ping(ctx, req.(*PingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _FileService_StoreFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StoreFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FileServiceServer).StoreFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/files.FileService/StoreFile",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FileServiceServer).StoreFile(ctx, req.(*StoreFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -194,10 +162,6 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _FileService_Ping_Handler,
-		},
-		{
-			MethodName: "StoreFile",
-			Handler:    _FileService_StoreFile_Handler,
 		},
 		{
 			MethodName: "GetFile",

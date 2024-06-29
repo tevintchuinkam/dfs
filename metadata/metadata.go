@@ -15,7 +15,12 @@ import (
 
 	"github.com/tevintchuinkam/tdfs/files"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+}
 
 // ensures that FileServer implements chunkServiceClient
 var _ MetadataServiceServer = (*MetaDataServer)(nil)
@@ -62,8 +67,9 @@ func (s *MetaDataServer) Start() {
 func (s *MetaDataServer) RegisterFileServer(port int) error {
 	// ping the server
 	var conn *grpc.ClientConn
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port))
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
+		slog.Error(err.Error())
 		return fmt.Errorf("could not connect. err: %v", err)
 	}
 	defer conn.Close()

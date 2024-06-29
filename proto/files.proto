@@ -12,25 +12,15 @@ message PingResponse {
 
 message GetFileRequest {
     string name = 1;
-    string dir = 2;
 }
 
 message File {
     bytes data = 1;
 }
 
-message StoreFileRequest {
-    bytes body = 1;
-}
-
-message StoreFileResponse {
-    string err = 1;
-}
-
 message CreateFileRequest {
     string name =  1;
-    string dir = 2;
-    bytes data = 3;
+    bytes data = 2;
 }
 
 message CreateFileResponse {
@@ -39,7 +29,6 @@ message CreateFileResponse {
 
 service FileService {
     rpc Ping(PingRequest) returns (PingResponse);
-    rpc StoreFile(StoreFileRequest) returns (StoreFileResponse);
     rpc GetFile(GetFileRequest) returns (File);
     rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
 }
