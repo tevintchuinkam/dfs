@@ -7,7 +7,9 @@ import (
 	"net"
 	"os"
 	"path"
+	"time"
 
+	"github.com/tevintchuinkam/tdfs/interceptors"
 	grpc "google.golang.org/grpc"
 )
 
@@ -61,14 +63,17 @@ func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*File, er
 }
 
 // if all goes well, this function will not return
-func (s *FileServer) Start() {
+func (s *FileServer) Start(requestDelay time.Duration) {
 	// accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen on port %s error=%v", addr, err)
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.DelayInterceptor(requestDelay)),
+		grpc.StreamInterceptor(interceptors.DelayStreamInterceptor(requestDelay)),
+	)
 	RegisterFileServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)

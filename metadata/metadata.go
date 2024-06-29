@@ -9,13 +9,15 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"log"
 	"net"
 
 	"github.com/tevintchuinkam/tdfs/files"
+	"github.com/tevintchuinkam/tdfs/helpers"
+	"github.com/tevintchuinkam/tdfs/interceptors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func init() {
@@ -50,14 +52,17 @@ func New(port int) *MetaDataServer {
 	}
 }
 
-func (s *MetaDataServer) Start() {
+func (s *MetaDataServer) Start(requestDelay time.Duration) {
 	// accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen on port %s: %v", addr, err)
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.DelayInterceptor(requestDelay)),
+		grpc.StreamInterceptor(interceptors.DelayStreamInterceptor(requestDelay)),
+	)
 	RegisterMetadataServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)
@@ -65,15 +70,7 @@ func (s *MetaDataServer) Start() {
 }
 
 func (s *MetaDataServer) RegisterFileServer(port int) error {
-	// ping the server
-	var conn *grpc.ClientConn
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		slog.Error(err.Error())
-		return fmt.Errorf("could not connect. err: %v", err)
-	}
-	defer conn.Close()
-	c := files.NewFileServiceClient(conn)
+	c := helpers.NewFileServiceClient(int32(port))
 	// ping the server
 	challenge := rand.Int63()
 	resp, err := c.Ping(context.Background(), &files.PingRequest{Challenge: challenge})

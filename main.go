@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	LATENCY           = 3 * time.Microsecond
 	CLIENT_PORT       = 4999
 	MDS_PORT          = 5000
 	NUM_CHUNK_SERVERS = 10
@@ -25,7 +26,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	// create the metadata server
 	mds := metadata.New(MDS_PORT)
-	go mds.Start()
+	go mds.Start(LATENCY)
 	slog.Info("mds started", "port", MDS_PORT)
 
 	c := client.New(CLIENT_PORT, MDS_PORT)
@@ -38,7 +39,7 @@ func main() {
 		fsPorts = append(fsPorts, MDS_PORT+i+1)
 	}
 	for _, port := range fsPorts {
-		go files.New(port).Start()
+		go files.New(port).Start(LATENCY)
 	}
 	time.Sleep(1 * time.Second)
 	for _, port := range fsPorts {
