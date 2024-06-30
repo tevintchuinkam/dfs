@@ -6,22 +6,37 @@ import (
 )
 
 func TestDirFuncs(t *testing.T) {
-	root := &directory{
+	root := &fileInfo{
 		name: "root",
-		subDirs: []*directory{
+		subEntries: []*fileInfo{
 			{
 				name: "sub1",
-				subDirs: []*directory{
-					{name: "sub1_1"},
+				subEntries: []*fileInfo{
+					{name: "sub1_1",
+						isDir: true,
+					}, {
+						name:  "file1.txt",
+						isDir: false,
+					},
+					{
+						name:  "file2.txt",
+						isDir: false,
+					},
 				},
-				files: []string{"file1.txt", "file2.txt"},
 			},
 			{
-				name:  "sub2",
-				files: []string{"file3.txt"},
+				name: "sub2",
+				subEntries: []*fileInfo{{
+					name:  "file3.txt",
+					isDir: false,
+				},
+				},
+			},
+			{
+				name:  "rootfile.txt",
+				isDir: false,
 			},
 		},
-		files: []string{"rootfile.txt"},
 	}
 
 	dir, err := root.walkTo("sub1/sub1_1")

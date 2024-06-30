@@ -1,12 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -29,10 +27,6 @@ func main() {
 	go mds.Start(LATENCY)
 	slog.Info("mds started", "port", MDS_PORT)
 
-	c := client.New(CLIENT_PORT, MDS_PORT)
-	go c.Start()
-	slog.Info("started client", "port", CLIENT_PORT)
-
 	// create a few files servers
 	var fsPorts []int
 	for i := range NUM_CHUNK_SERVERS {
@@ -54,22 +48,32 @@ func main() {
 	fmt.Printf("data size: %d bytes\n", len(data))
 	// interact with the different clients to store and retreive some files
 
+	c := client.New(MDS_PORT)
 	// create files
+	files := []string{}
 	for i := range 20 {
-		r, err := c.CreateFile(context.TODO(), &client.CreateFileRequest{
-			Name: fmt.Sprintf("file-%d", i+1),
-			Data: data,
-		})
+		files = append(files, fmt.Sprintf("somedir/file-%d", i+1))
+	}
+	for _, filename := range files {
+		r, err := c.CreateFile(filename, data)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if int(r.BytesWritten) != len(data) {
+		if r != len(data) {
 			log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
 		}
 	}
 
 	//  retrieve the files
-	// todo
+	for _, filename := range files {
+		bytes, err := c.GetFile(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(data) != len(bytes) {
+			log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+		}
+	}
 
 	// do a file traversal (with and without metadata prefetching)
 
@@ -78,17 +82,16 @@ func main() {
 }
 
 // Function to traverse the directory
-func traverseDirectory(dirPath string) error {
+func traverseDirectory(c *client.Client, dirPath string) error {
 	// Open the directory
-	dir, err := os.Open(dirPath)
+	dir, err := c.OpenDir(dirPath)
 	if err != nil {
 		return err
 	}
-	defer dir.Close() // Ensure the directory is closed when done
-
+	index := 0
 	for {
-		// Read the directory entries
-		entries, err := dir.Readdir(10) // Read 10 entries at a time (or use another batch size)
+		// Read the directory enntry
+		entry, err := c.ReadDir(dir, index, false)
 		if err != nil {
 			if err == io.EOF {
 				break // End of directory
@@ -97,22 +100,21 @@ func traverseDirectory(dirPath string) error {
 		}
 
 		// Iterate through the directory entries
-		for _, entry := range entries {
-			// Print the entry name
-			fmt.Println("Found entry:", entry.Name())
+		// Print the entry name
+		fmt.Println("Found entry:", entry.Name)
 
-			// Check if the entry is a directory
-			if entry.IsDir() {
-				// If it's a directory, recursively traverse it
-				err = traverseDirectory(filepath.Join(dirPath, entry.Name()))
-				if err != nil {
-					return err
-				}
-			} else {
-				// If it's a file, perform actions on the file (e.g., print file info)
-				fmt.Printf("File: %s, Size: %d bytes\n", entry.Name(), entry.Size())
+		// Check if the entry is a directory
+		if entry.IsDir {
+			// If it's a directory, recursively traverse it
+			err = traverseDirectory(c, filepath.Join(dirPath, entry.Name))
+			if err != nil {
+				return err
 			}
+		} else {
+			// If it's a file, perform actions on the file (e.g., print file info)
+			fmt.Printf("File: %s, Size: %d bytes\n", entry.Name, entry.Size)
 		}
+		index++
 	}
 	return nil
 }

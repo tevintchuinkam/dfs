@@ -4,6 +4,7 @@ package metadata;
 
 message RecRequest {
     int64 fileSize = 1;
+    string name = 2;
 }
 
 message RecResponse {
@@ -26,8 +27,37 @@ message OpenDirResponse {
     string name = 1;
 }
 
+message ReadDirRequest {
+    string name = 1;
+    int32 index = 2;
+}
+
+message FileInfo {
+    string name = 1;
+    int64 size = 2;
+    int32 mode = 3;
+    string modTime = 4;
+    bool isDir = 5;
+    int32 port = 6;
+}
+
+message ReadDirAllResponse {
+    repeated FileInfo entries = 1;
+}
+
+message MkDirRequest {
+    string name = 1;
+}
+
+message MkDirResponse {
+    string name = 1;
+}
+
 service MetadataService {
-    rpc GetStorageLocationRecommendation(RecRequest) returns (RecResponse);
+    rpc RegisterFileCreation(RecRequest) returns (RecResponse);
     rpc GetLocation(LocRequest) returns (LocResponse);
     rpc OpenDir(OpenDirRequest) returns (OpenDirResponse);
+    rpc ReadDir(ReadDirRequest) returns (FileInfo);
+    rpc ReadDirAll(ReadDirRequest) returns (ReadDirAllResponse);
+    rpc MkDir(MkDirRequest) returns (MkDirResponse);
 }
