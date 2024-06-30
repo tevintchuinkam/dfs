@@ -18,7 +18,16 @@ message LocResponse {
     int32 port =  1; 
 }
 
+message OpenDirRequest {
+    string name = 1;
+}
+
+message OpenDirResponse {
+    string name = 1;
+}
+
 service MetadataService {
     rpc GetStorageLocationRecommendation(RecRequest) returns (RecResponse);
     rpc GetLocation(LocRequest) returns (LocResponse);
+    rpc OpenDir(OpenDirRequest) returns (OpenDirResponse);
 }

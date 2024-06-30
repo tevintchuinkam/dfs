@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type MetadataServiceClient interface {
 	GetStorageLocationRecommendation(ctx context.Context, in *RecRequest, opts ...grpc.CallOption) (*RecResponse, error)
 	GetLocation(ctx context.Context, in *LocRequest, opts ...grpc.CallOption) (*LocResponse, error)
+	OpenDir(ctx context.Context, in *OpenDirRequest, opts ...grpc.CallOption) (*OpenDirResponse, error)
 }
 
 type metadataServiceClient struct {
@@ -52,12 +53,22 @@ func (c *metadataServiceClient) GetLocation(ctx context.Context, in *LocRequest,
 	return out, nil
 }
 
+func (c *metadataServiceClient) OpenDir(ctx context.Context, in *OpenDirRequest, opts ...grpc.CallOption) (*OpenDirResponse, error) {
+	out := new(OpenDirResponse)
+	err := c.cc.Invoke(ctx, "/metadata.MetadataService/OpenDir", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MetadataServiceServer is the server API for MetadataService service.
 // All implementations must embed UnimplementedMetadataServiceServer
 // for forward compatibility
 type MetadataServiceServer interface {
 	GetStorageLocationRecommendation(context.Context, *RecRequest) (*RecResponse, error)
 	GetLocation(context.Context, *LocRequest) (*LocResponse, error)
+	OpenDir(context.Context, *OpenDirRequest) (*OpenDirResponse, error)
 	mustEmbedUnimplementedMetadataServiceServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedMetadataServiceServer) GetStorageLocationRecommendation(conte
 }
 func (UnimplementedMetadataServiceServer) GetLocation(context.Context, *LocRequest) (*LocResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLocation not implemented")
+}
+func (UnimplementedMetadataServiceServer) OpenDir(context.Context, *OpenDirRequest) (*OpenDirResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenDir not implemented")
 }
 func (UnimplementedMetadataServiceServer) mustEmbedUnimplementedMetadataServiceServer() {}
 
@@ -120,6 +134,24 @@ func _MetadataService_GetLocation_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MetadataService_OpenDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenDirRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetadataServiceServer).OpenDir(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/metadata.MetadataService/OpenDir",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetadataServiceServer).OpenDir(ctx, req.(*OpenDirRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MetadataService_ServiceDesc is the grpc.ServiceDesc for MetadataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var MetadataService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLocation",
 			Handler:    _MetadataService_GetLocation_Handler,
+		},
+		{
+			MethodName: "OpenDir",
+			Handler:    _MetadataService_OpenDir_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

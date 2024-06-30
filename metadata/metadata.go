@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"math/rand"
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -123,32 +122,14 @@ func (s *MetaDataServer) GetLocation(ctx context.Context, req *LocRequest) (*Loc
 	}, nil
 }
 
-type directory struct {
-	name    string
-	prev    *directory
-	subDirs []*directory
-	files   []string
-}
-
-func (d *directory) String() string {
-	if d == nil {
-		return ""
+func (s *MetaDataServer) OpenDir(ctx context.Context, req *OpenDirRequest) (*OpenDirResponse, error) {
+	p := path.Dir(req.Name)
+	// check if this is a valid directory
+	if !isDir(&s.rootDir, req.Name) {
+		slog.Error("dir does not exist")
+		return nil, fmt.Errorf("the directory %s doesn't exist", p)
 	}
-	var sb strings.Builder
-	sb.WriteString(d.name)
-	for _, file := range d.files {
-		sb.WriteString(fmt.Sprintf("\n\t├── %s", file))
-	}
-	return sb.String()
-}
-
-func (d *directory) WalkTo(p string) (*directory, error) {
-	base := path.Base(p)
-	rest := strings.TrimPrefix(p, base)
-	for _, dir := range d.subDirs {
-		if base == dir.name {
-			return dir.WalkTo(rest)
-		}
-	}
-	return nil, fmt.Errorf("directory does not exist: %s", base)
+	return &OpenDirResponse{
+		Name: p,
+	}, nil
 }

@@ -25,6 +25,8 @@ type Client struct {
 	UnimplementedClientServiceServer
 	port    int
 	mdsPort int
+
+	cache ClientCache
 }
 
 func New(port int, mdsPort int) *Client {
@@ -49,13 +51,24 @@ func (c *Client) Start() {
 	}
 }
 
+// open a directory
 func (c *Client) Open(ctx context.Context, req *OpenRequest) (*OpenConfirmation, error) {
-	return nil, nil
+	m := newMDSClient(c.mdsPort)
+	res := new(OpenConfirmation)
+	r, err := m.OpenDir(ctx, &metadata.OpenDirRequest{
+		Name: req.Name,
+	})
+	if err != nil {
+		slog.Error("could not open dir", "err", err.Error())
+		return res, err
+	}
+	res.Name = r.Name
+	return res, nil
 }
 
 func (c *Client) CreateFile(ctx context.Context, req *CreateFileRequest) (*CreateFileResponse, error) {
 	// ask the mds on on what storage server to store the file
-	mds := newMDSClient(int32(c.mdsPort))
+	mds := newMDSClient(c.mdsPort)
 	rec, err := mds.GetStorageLocationRecommendation(context.Background(), &metadata.RecRequest{
 		FileSize: int64(len(req.Data)),
 	})
@@ -80,7 +93,7 @@ func (c *Client) CreateFile(ctx context.Context, req *CreateFileRequest) (*Creat
 }
 
 func (c *Client) GetFile(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
-	mds := newMDSClient(int32(c.mdsPort))
+	mds := newMDSClient(c.mdsPort)
 	loc, err := mds.GetLocation(context.Background(), &metadata.LocRequest{
 		Name: req.Name,
 	})
@@ -102,7 +115,7 @@ func (c *Client) GetFile(ctx context.Context, req *ReadFileRequest) (*ReadFileRe
 	}, nil
 }
 
-func newMDSClient(port int32) metadata.MetadataServiceClient {
+func newMDSClient(port int) metadata.MetadataServiceClient {
 	var conn *grpc.ClientConn
 	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

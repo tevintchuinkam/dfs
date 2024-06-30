@@ -57,7 +57,9 @@ message OpenRequest {
     string name = 1;
 }
 
-message OpenConfirmation {}
+message OpenConfirmation {
+    string name = 1;
+}
 
 message CloseRequest {
     string name = 1;
