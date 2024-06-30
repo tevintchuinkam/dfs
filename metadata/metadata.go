@@ -189,10 +189,10 @@ func (s *MetaDataServer) GetLocation(ctx context.Context, req *LocRequest) (*Loc
 }
 
 func (s *MetaDataServer) OpenDir(ctx context.Context, req *OpenDirRequest) (*OpenDirResponse, error) {
-	p := path.Dir(req.Name)
+	p := path.Clean(req.Name)
 	// check if this is a valid directory
 	if !isDir(s.rootDir, req.Name) {
-		slog.Error("dir does not exist")
+		slog.Error("dir does not exist", "name", req.Name)
 		return nil, fmt.Errorf("the directory %s doesn't exist", p)
 	}
 	return &OpenDirResponse{
@@ -227,7 +227,7 @@ func convert(f *fileInfo) *FileInfo {
 }
 
 func (s *MetaDataServer) ReadDirAll(ctx context.Context, req *ReadDirRequest) (*ReadDirAllResponse, error) {
-	p := path.Dir(req.Name)
+	p := path.Clean(req.Name)
 	// check if this is a valid directory
 	if !isDir(s.rootDir, req.Name) {
 		slog.Error("dir does not exist")

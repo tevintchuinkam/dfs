@@ -22,7 +22,7 @@ const (
 )
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelInfo)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	log.SetFlags(log.Lshortfile)
 	// create the metadata server
 	mds := metadata.New(MDS_PORT)
@@ -81,6 +81,9 @@ func main() {
 	}
 
 	// do a file traversal (with and without metadata prefetching)
+	if err := traverseDirectory(c, "."); err != nil {
+		log.Fatal(err)
+	}
 
 	// do a grep (with and without smart data proximity)
 
@@ -93,20 +96,22 @@ func traverseDirectory(c *client.Client, dirPath string) error {
 	if err != nil {
 		return err
 	}
+	slog.Debug("openeded dir", "name", dir)
 	index := 0
 	for {
-		// Read the directory enntry
+		// Read the directory entry
 		entry, err := c.ReadDir(dir, index, false)
 		if err != nil {
 			if err == io.EOF {
 				break // End of directory
 			}
+			slog.Error(err.Error())
 			return err
 		}
 
 		// Iterate through the directory entries
 		// Print the entry name
-		fmt.Println("Found entry:", entry.Name)
+		slog.Info("Found entry", "name", entry.Name)
 
 		// Check if the entry is a directory
 		if entry.IsDir {

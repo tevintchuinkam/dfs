@@ -149,14 +149,13 @@ func (c *Client) CreateFile(name string, data []byte) (int, error) {
 
 func (c *Client) MkDir(name string) error {
 	mds := newMDSClient(c.mdsPort)
-	r, err := mds.MkDir(context.Background(), &metadata.MkDirRequest{
+	_, err := mds.MkDir(context.Background(), &metadata.MkDirRequest{
 		Name: name,
 	})
 	if err != nil {
 		slog.Error(err.Error())
 		return err
 	}
-	slog.Debug("created directory", "name", r.Name)
 	return nil
 }
 
@@ -169,12 +168,10 @@ func (c *Client) GetFile(name string) ([]byte, error) {
 		slog.Error(err.Error())
 		return nil, err
 	}
-	slog.Debug("location of file", "name", name, "location", loc.Port)
 	fs := helpers.NewFileServiceClient(loc.Port)
 	fr, err := fs.GetFile(context.Background(), &files.GetFileRequest{
 		Name: name,
 	})
-	slog.Debug("retrieved file", "length", len(fr.Data))
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err

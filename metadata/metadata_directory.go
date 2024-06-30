@@ -111,7 +111,6 @@ func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 // entryAlreadyExists checks if a file or directory with the specified path already exists.
 func entryAlreadyExists(rootDir *fileInfo, p string) bool {
 	_, err := rootDir.walkTo(p)
-	slog.Debug("directory already exsits", "path", p)
 	return err == nil
 }
 
@@ -140,6 +139,8 @@ func (e DirNonExistantError) Error() string {
 }
 
 func isDir(root *fileInfo, name string) bool {
+	name = path.Clean(name)
+	// slog.Debug("comparing root to path", "root", root.name, "root_isdir", root.isDir, "root.name == name", root.name == name, "path", name)
 	if root.isDir && root.name == name {
 		return true
 	}
