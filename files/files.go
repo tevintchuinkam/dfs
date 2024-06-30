@@ -3,7 +3,9 @@ package files
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"path"
@@ -59,7 +61,19 @@ func (s *FileServer) CreateFile(ctx context.Context, in *CreateFileRequest) (*Cr
 
 // required for grpc
 func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*File, error) {
-	return nil, nil
+	file, err := os.Open(path.Join(s.rootDir, path.Clean(in.Name)))
+	if err != nil {
+		slog.Error("could not open file", "err", err)
+		return nil, err
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		slog.Error("could not read bytes from file", "file", in.Name, "err", err)
+		return nil, err
+	}
+	res := new(File)
+	res.Data = bytes
+	return res, nil
 }
 
 // if all goes well, this function will not return

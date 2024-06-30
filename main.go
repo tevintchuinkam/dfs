@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -21,6 +22,7 @@ const (
 )
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	log.SetFlags(log.Lshortfile)
 	// create the metadata server
 	mds := metadata.New(MDS_PORT)
@@ -52,9 +54,12 @@ func main() {
 	// create files
 	files := []string{}
 	for i := range 20 {
-		files = append(files, fmt.Sprintf("somedir/file-%d", i+1))
+		files = append(files, fmt.Sprintf("somedir/file-%d.txt", i+1))
 	}
 	for _, filename := range files {
+		if err := c.MkDir(path.Dir(filename)); err != nil {
+			log.Fatal(err)
+		}
 		r, err := c.CreateFile(filename, data)
 		if err != nil {
 			log.Fatal(err)

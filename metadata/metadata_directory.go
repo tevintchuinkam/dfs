@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -23,12 +24,19 @@ type fileInfo struct {
 }
 
 func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
+	if d == nil {
+		slog.Error("dir is nil")
+		return nil, errors.New("dir is nil")
+	}
 	if !d.isDir {
-		err := fmt.Errorf("%s is not a directory")
+		err := fmt.Errorf("%s is not a directory", d.name)
 		slog.Error(err.Error())
 		return nil, err
 	}
 	p = path.Clean(p)
+	if d.name == p {
+		return d, nil
+	}
 	parts := strings.Split(p, "/")
 	currentDir := d
 
@@ -80,8 +88,10 @@ func getFileInfoAtIndex(dirName string, index int) (*fileInfo, error) {
 
 func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 	// Find the parent directory
+	dirPath = path.Dir(dirPath)
 	parentDir, err := root.walkTo(dirPath)
 	if err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 
@@ -98,9 +108,10 @@ func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 	return nil
 }
 
-// fileAlreadyExists checks if a file or directory with the specified path already exists.
-func fileAlreadyExists(rootDir *fileInfo, p string) bool {
+// entryAlreadyExists checks if a file or directory with the specified path already exists.
+func entryAlreadyExists(rootDir *fileInfo, p string) bool {
 	_, err := rootDir.walkTo(p)
+	slog.Debug("directory already exsits", "path", p)
 	return err == nil
 }
 
@@ -129,6 +140,9 @@ func (e DirNonExistantError) Error() string {
 }
 
 func isDir(root *fileInfo, name string) bool {
+	if root.isDir && root.name == name {
+		return true
+	}
 	if _, err := root.walkTo(name); err != nil {
 		return false
 	}

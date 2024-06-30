@@ -49,7 +49,15 @@ type MetaDataServer struct {
 
 func New(port int) *MetaDataServer {
 	return &MetaDataServer{
-		port: port,
+		port:        port,
+		muFile:      sync.Mutex{},
+		fileServers: []*fileServer{},
+		muDir:       sync.Mutex{},
+		rootDir: &fileInfo{
+			name:  ".",
+			isDir: true,
+		},
+		fileLocation: make(map[string]*fileServer),
 	}
 }
 
@@ -92,20 +100,19 @@ func (s *MetaDataServer) RegisterFileServer(port int) error {
 	return nil
 }
 
-// MkDir creates a directory at the specified path in the client's filesystem.
-func (s *MetaDataServer) MkDir(ctx context.Context, req *MkDirRequest) (*MkDirResponse, error) {
-	p := path.Clean(req.Name)
-	dir := path.Dir(p)
+func (s *MetaDataServer) MkDir(ctx context.Context, in *MkDirRequest) (*MkDirResponse, error) {
+	dir := path.Clean(in.Name)
 
 	// Check if the parent directory exists
-	if !isDir(s.rootDir, dir) {
+	if !isDir(s.rootDir, path.Dir(dir)) {
 		slog.Error("parent directory does not exist", "dir", dir)
 		return nil, fmt.Errorf("parent directory %s does not exist", dir)
 	}
-
+	res := new(MkDirResponse)
+	res.Name = dir
 	// Check if the directory to be created already exists
-	if fileAlreadyExists(s.rootDir, p) {
-		return nil, fmt.Errorf("directory %s already exists", p)
+	if entryAlreadyExists(s.rootDir, dir) {
+		return res, nil
 	}
 
 	// Lock the directory structure and create the new directory
@@ -113,7 +120,7 @@ func (s *MetaDataServer) MkDir(ctx context.Context, req *MkDirRequest) (*MkDirRe
 	defer s.muDir.Unlock()
 
 	newDir := &fileInfo{
-		name:  path.Base(p),
+		name:  dir,
 		isDir: true,
 	}
 
@@ -123,7 +130,7 @@ func (s *MetaDataServer) MkDir(ctx context.Context, req *MkDirRequest) (*MkDirRe
 		return nil, err
 	}
 
-	return &MkDirResponse{Name: p}, nil
+	return &MkDirResponse{Name: dir}, nil
 }
 
 // assumes the client will indeed write the data to the given client
@@ -132,10 +139,10 @@ func (s *MetaDataServer) RegisterFileCreation(ctx context.Context, req *RecReque
 	p := path.Clean(req.Name)
 	dir := path.Dir(p)
 	if !isDir(s.rootDir, dir) {
-		slog.Error("directory does not exist", "dir", dir)
+		slog.Error("directory does not exist", "dir", dir, "original_dir", req.Name)
 		return nil, fmt.Errorf("directory %s does not exist", dir)
 	}
-	if fileAlreadyExists(s.rootDir, p) {
+	if entryAlreadyExists(s.rootDir, p) {
 		err := fmt.Errorf("file %s already exists", p)
 		slog.Error(err.Error())
 		return nil, err
@@ -157,12 +164,13 @@ func (s *MetaDataServer) RegisterFileCreation(ctx context.Context, req *RecReque
 	min.load += int(req.FileSize)
 	min.muLoad.Unlock()
 	s.muDir.Lock()
-	storeFileInfo(s.rootDir, req.Name, &fileInfo{
+	storeFileInfo(s.rootDir, dir, &fileInfo{
 		name:  req.Name,
 		size:  req.FileSize,
 		port:  min.port,
 		isDir: false,
 	})
+	s.fileLocation[p] = min
 	s.muDir.Unlock()
 	return &RecResponse{
 		Port: int32(min.port),
