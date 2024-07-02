@@ -53,7 +53,7 @@ func main() {
 	c := client.New(MDS_PORT)
 	// create files
 	files := []string{}
-	for i := range 20 {
+	for i := range 1 {
 		files = append(files, fmt.Sprintf("somedir/file-%d.txt", i+1))
 	}
 	for _, filename := range files {

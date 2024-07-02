@@ -164,12 +164,14 @@ func (s *MetaDataServer) RegisterFileCreation(ctx context.Context, req *RecReque
 	min.load += int(req.FileSize)
 	min.muLoad.Unlock()
 	s.muDir.Lock()
-	storeFileInfo(s.rootDir, dir, &fileInfo{
-		name:  req.Name,
+	if err := storeFileInfo(s.rootDir, p, &fileInfo{
+		name:  path.Base(p),
 		size:  req.FileSize,
 		port:  min.port,
 		isDir: false,
-	})
+	}); err != nil {
+		log.Fatal(err)
+	}
 	s.fileLocation[p] = min
 	s.muDir.Unlock()
 	return &RecResponse{
@@ -208,7 +210,7 @@ func (s *MetaDataServer) ReadDir(ctx context.Context, req *ReadDirRequest) (*Fil
 		return nil, fmt.Errorf("the directory %s doesn't exist", p)
 	}
 
-	info, err := getFileInfoAtIndex(req.Name, int(req.Index))
+	info, err := getFileInfoAtIndex(s, p, int(req.Index))
 	if err != nil {
 		log.Fatal(err)
 	}

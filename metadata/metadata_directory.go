@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"log/slog"
 	"os"
 	"path"
@@ -23,7 +24,25 @@ type fileInfo struct {
 	port       int
 }
 
+// GenerateFileTree generates the file tree starting from the given root and returns it as a string.
+func GenerateFileTree(root *fileInfo) string {
+	indent := "\t"
+	var result strings.Builder
+	if root.isDir {
+		result.WriteString(indent + root.name + "/\n")
+		indent += "  "
+		for _, entry := range root.subEntries {
+			result.WriteString(GenerateFileTree(entry))
+		}
+	} else {
+		result.WriteString(indent + root.name + "\n")
+	}
+	return result.String()
+}
+
 func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
+	log.Println("input:")
+	log.Println(GenerateFileTree(d))
 	if d == nil {
 		slog.Error("dir is nil")
 		return nil, errors.New("dir is nil")
@@ -39,6 +58,7 @@ func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
 	}
 	parts := strings.Split(p, "/")
 	currentDir := d
+	log.Println("parts: ", parts)
 
 	for _, part := range parts {
 		if part == "" {
@@ -56,34 +76,29 @@ func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
 			return nil, DirNonExistantError{part}
 		}
 	}
+	log.Println("found dir", "name", currentDir.name, "subentries", currentDir.subEntries)
+	log.Println("output: ", GenerateFileTree(currentDir))
 	return currentDir, nil
 }
 
-func getFileInfoAtIndex(dirName string, index int) (*fileInfo, error) {
-	rootDir, err := os.Open(dirName)
+func getFileInfoAtIndex(m *MetaDataServer, dirName string, index int) (*fileInfo, error) {
+	parent, err := m.rootDir.walkTo(path.Clean(dirName))
 	if err != nil {
-		return nil, err
+		slog.Error("directory not found", "name", dirName)
+		return nil, fmt.Errorf("directory not found: %s", dirName)
 	}
-	defer rootDir.Close()
-
-	entries, err := rootDir.Readdir(0) // Read all entries
-	if err != nil {
-		return nil, err
+	log.Println("parent", parent.name)
+	log.Println("subdirs")
+	for _, e := range parent.subEntries {
+		fmt.Println((e))
+	}
+	if index < 0 || index >= len(parent.subEntries) {
+		log.Println(GenerateFileTree(m.rootDir))
+		log.Println(GenerateFileTree(parent))
+		return nil, fmt.Errorf("index %d is out of range. len_entries=%d dirName=%s", index, len(parent.subEntries), dirName)
 	}
 
-	if index < 0 || index >= len(entries) {
-		return nil, fmt.Errorf("index %d is out of range", index)
-	}
-
-	entry := entries[index]
-	return &fileInfo{
-		name:    entry.Name(),
-		size:    entry.Size(),
-		mode:    entry.Mode(),
-		modTime: entry.ModTime(),
-		isDir:   entry.IsDir(),
-		sys:     entry.Sys(),
-	}, nil
+	return parent.subEntries[index], nil
 }
 
 func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
@@ -104,7 +119,6 @@ func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 
 	// Append the new fileInfo to the parent's subEntries
 	parentDir.subEntries = append(parentDir.subEntries, fi)
-
 	return nil
 }
 
