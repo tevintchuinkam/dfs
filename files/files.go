@@ -11,7 +11,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/tevintchuinkam/tdfs/interceptors"
 	grpc "google.golang.org/grpc"
 )
 
@@ -84,10 +83,7 @@ func (s *FileServer) Start(requestDelay time.Duration) {
 	if err != nil {
 		log.Fatalf("failed to listen on port %s error=%v", addr, err)
 	}
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptors.DelayInterceptor(requestDelay)),
-		grpc.StreamInterceptor(interceptors.DelayStreamInterceptor(requestDelay)),
-	)
+	grpcServer := grpc.NewServer()
 	RegisterFileServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)

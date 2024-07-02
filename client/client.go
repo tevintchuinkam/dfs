@@ -21,7 +21,7 @@ func init() {
 
 type accessData struct {
 	lastAccess                       time.Time
-	accessCountInLast200MilliSeconds int
+	accessCountInLast100MilliSeconds int
 }
 
 type Client struct {
@@ -43,7 +43,16 @@ func New(mdsPort int, pefetchThreshold int) *Client {
 			dirs: dirs,
 		},
 		predictionHistory: make(map[string]*accessData),
+		prefetchThreshold: pefetchThreshold,
 	}
+}
+
+func (c *Client) ClearCache() {
+	dirs := make(map[dirName]dirContents)
+	c.cache = &ClientCache{
+		dirs: dirs,
+	}
+	c.predictionHistory = make(map[string]*accessData)
 }
 
 func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileInfo, error) {
@@ -61,12 +70,12 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 
 		// cache the metadata
 		if h, ok := c.predictionHistory[name]; ok {
-			if h.lastAccess.Before(time.Now().Add(-200 * time.Millisecond)) {
-				h.accessCountInLast200MilliSeconds = 0
+			if h.lastAccess.Before(time.Now().Add(-100 * time.Millisecond)) {
+				h.accessCountInLast100MilliSeconds = 0
 			} else {
-				if h.accessCountInLast200MilliSeconds > c.prefetchThreshold {
+				if h.accessCountInLast100MilliSeconds >= c.prefetchThreshold-1 {
 					// this is the trigger to prefetch the entire dir from mds
-					slog.Info("prefetching directory", "dir", name)
+					// slog.Info("prefetching directory", "dir", name, "trigger_index", index)
 					entries, err := _prefetchDir(c, name)
 					if err != nil {
 						log.Fatalf("could not prefetch dir %s err: %v", name, err)
@@ -81,12 +90,12 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 					return entries[index], nil
 				}
 			}
-			h.accessCountInLast200MilliSeconds++
+			h.accessCountInLast100MilliSeconds++
 			h.lastAccess = time.Now()
 		} else {
 			c.predictionHistory[name] = &accessData{
 				lastAccess:                       time.Now(),
-				accessCountInLast200MilliSeconds: 0,
+				accessCountInLast100MilliSeconds: 0,
 			}
 		}
 	}

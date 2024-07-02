@@ -16,7 +16,6 @@ import (
 
 	"github.com/tevintchuinkam/tdfs/files"
 	"github.com/tevintchuinkam/tdfs/helpers"
-	"github.com/tevintchuinkam/tdfs/interceptors"
 	"google.golang.org/grpc"
 )
 
@@ -68,10 +67,7 @@ func (s *MetaDataServer) Start(requestDelay time.Duration) {
 	if err != nil {
 		log.Fatalf("failed to listen on port %s: %v", addr, err)
 	}
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptors.DelayInterceptor(requestDelay)),
-		grpc.StreamInterceptor(interceptors.DelayStreamInterceptor(requestDelay)),
-	)
+	grpcServer := grpc.NewServer()
 	RegisterMetadataServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)

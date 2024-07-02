@@ -23,7 +23,10 @@ const (
 	CLIENT_PORT               = 4999
 	MDS_PORT                  = 5000
 	NUM_CHUNK_SERVERS         = 10
-	CLIENT_PREFETCH_THRESHOLD = 5
+	CLIENT_PREFETCH_THRESHOLD = 8
+	NUM_FOLDERS               = 2
+	NUM_FILE                  = 30
+	NUM_ITERATIONS            = 30
 )
 
 func main() {
@@ -59,71 +62,21 @@ func main() {
 	defer csvFile.Close()
 
 	// do a file traversal (with and without metadata prefetching)
-	if err := traverseDirectory(c, ".", true, writer); err != nil {
-		log.Fatal(err)
+	for _, useCache := range []bool{true, false} {
+		for iteration := range NUM_ITERATIONS {
+			// wait until cache is empty
+			c.ClearCache()
+			if err := traverseDirectory(c, ".", useCache, writer, iteration); err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
-
 	// do a grep (with and without smart data proximity)
 
 }
 
-func createFoldersAndFile(c *client.Client) {
-	data := data()
-	for dirNum := range 2 {
-		files := []string{}
-		for i := range 15 {
-			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
-		}
-		for _, filename := range files {
-			if err := c.MkDir(path.Dir(filename)); err != nil {
-				log.Fatal(err)
-			}
-			r, err := c.CreateFile(filename, data)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if r != len(data) {
-				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
-			}
-		}
-
-		//  retrieve the files
-		for _, filename := range files {
-			bytes, err := c.GetFile(filename)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if len(data) != len(bytes) {
-				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
-			}
-		}
-	}
-
-}
-
-// Function to open the CSV file
-func openCSVFile(filePath string) (*os.File, *csv.Writer) {
-	csvFile, err := os.Create(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	writer := csv.NewWriter(csvFile)
-
-	// Write the header if the file is newly created
-	fileInfo, err := csvFile.Stat()
-	if err != nil {
-		return nil, nil
-	}
-	if fileInfo.Size() == 0 {
-		writer.Write([]string{"Timestamp", "File", "Size (bytes)", "Time Taken", "Iteration", "UseCache", "DirPath"})
-		writer.Flush()
-	}
-
-	return csvFile, writer
-}
-
 // Function to traverse the directory
-func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *csv.Writer) error {
+func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *csv.Writer, iteration int) error {
 	// Open the directory
 	dir, err := c.OpenDir(dirPath)
 	if err != nil {
@@ -153,28 +106,42 @@ func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *
 		if entry.IsDir {
 			// If it's a directory, recursively traverse it
 			nextPath := filepath.Join(dirPath, entry.Name)
-			fmt.Println(entry.Name + string(os.PathSeparator))
-			if err := traverseDirectory(c, nextPath, useCache, writer); err != nil {
+			if err := traverseDirectory(c, nextPath, useCache, writer, iteration); err != nil {
 				return err
 			}
 		} else {
-			// If it's a file, perform actions on the file (e.g., print file info)
-			fmt.Printf("\t %s, %d bytes\n took %s", entry.Name, entry.Size, took)
-
 			// Write the file info to the CSV file
 			writer.Write([]string{
 				fmt.Sprint(time.Now().UnixNano()),
-				entry.Name,
-				fmt.Sprintf("%d", entry.Size),
-				took.String(),
-				fmt.Sprintf("%d", index),
+				fmt.Sprint(took.Nanoseconds()),
+				fmt.Sprint(iteration),
 				fmt.Sprintf("%t", useCache),
-				dirPath,
 			})
 			writer.Flush()
 		}
 		index++
 	}
+}
+
+// Function to open the CSV file
+func openCSVFile(filePath string) (*os.File, *csv.Writer) {
+	csvFile, err := os.Create(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	writer := csv.NewWriter(csvFile)
+
+	// Write the header if the file is newly created
+	fileInfo, err := csvFile.Stat()
+	if err != nil {
+		return nil, nil
+	}
+	if fileInfo.Size() == 0 {
+		writer.Write([]string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
+		writer.Flush()
+	}
+
+	return csvFile, writer
 }
 
 func data() []byte {
@@ -207,4 +174,37 @@ func data() []byte {
 
 		- Robert Frost
 	`)
+}
+func createFoldersAndFile(c *client.Client) {
+	data := data()
+	for dirNum := range NUM_FOLDERS {
+		files := []string{}
+		for i := range NUM_FILE {
+			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
+		}
+		for _, filename := range files {
+			if err := c.MkDir(path.Dir(filename)); err != nil {
+				log.Fatal(err)
+			}
+			r, err := c.CreateFile(filename, data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if r != len(data) {
+				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
+			}
+		}
+
+		//  retrieve the files
+		for _, filename := range files {
+			bytes, err := c.GetFile(filename)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(data) != len(bytes) {
+				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+			}
+		}
+	}
+
 }
