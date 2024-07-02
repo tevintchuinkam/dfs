@@ -19,21 +19,30 @@ func init() {
 	log.SetFlags(log.Lshortfile)
 }
 
+type accessData struct {
+	lastAccess                       time.Time
+	accessCountInLast200MilliSeconds int
+}
+
 type Client struct {
-	mdsPort int
+	mdsPort           int
+	prefetchThreshold int
 
 	cache *ClientCache
 	// dirname: unique access count
-	predictionHistory map[string]*struct {
-		lastAccess                       time.Time
-		accessCountInLast200MilliSeconds int
-	}
+	predictionHistory map[string]*accessData
 }
 
-func New(mdsPort int) *Client {
+func New(mdsPort int, pefetchThreshold int) *Client {
+
+	dirs := make(map[dirName]dirContents)
 	// ping the server
 	return &Client{
 		mdsPort: mdsPort,
+		cache: &ClientCache{
+			dirs: dirs,
+		},
+		predictionHistory: make(map[string]*accessData),
 	}
 }
 
@@ -41,35 +50,33 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 	if useCache {
 		// try finding the dirs
 		dir, ok := c.cache.dirs[dirName(name)]
-		if !ok {
-			slog.Warn("directory not found in cache", "dir_name", name)
-		} else {
+		if ok {
 			if dir.full {
-				if index < 0 || index > len(dir.entries) {
+				if index < 0 || index >= len(dir.entries) {
 					return nil, io.EOF
 				}
 				return dir.entries[index], nil
 			}
 		}
-	}
 
-	// if use cache is set, cache the metadata
-	if useCache {
+		// cache the metadata
 		if h, ok := c.predictionHistory[name]; ok {
 			if h.lastAccess.Before(time.Now().Add(-200 * time.Millisecond)) {
 				h.accessCountInLast200MilliSeconds = 0
 			} else {
-				if h.accessCountInLast200MilliSeconds > 10 {
-					// 10 files requested from this dir in the last 200ms
+				if h.accessCountInLast200MilliSeconds > c.prefetchThreshold {
 					// this is the trigger to prefetch the entire dir from mds
 					slog.Info("prefetching directory", "dir", name)
 					entries, err := _prefetchDir(c, name)
 					if err != nil {
-						log.Fatalf("cound not prefetch dir %s err: %v", name, err)
+						log.Fatalf("could not prefetch dir %s err: %v", name, err)
 					}
 					c.cache.dirs[dirName(name)] = dirContents{
 						full:    true,
 						entries: entries,
+					}
+					if index < 0 || index >= len(entries) {
+						return nil, io.EOF
 					}
 					return entries[index], nil
 				}
@@ -77,15 +84,13 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 			h.accessCountInLast200MilliSeconds++
 			h.lastAccess = time.Now()
 		} else {
-			c.predictionHistory[name] = &struct {
-				lastAccess                       time.Time
-				accessCountInLast200MilliSeconds int
-			}{
+			c.predictionHistory[name] = &accessData{
 				lastAccess:                       time.Now(),
 				accessCountInLast200MilliSeconds: 0,
 			}
 		}
 	}
+
 	// request the file from mds, no caching
 	m := newMDSClient(c.mdsPort)
 	r, err := m.ReadDir(context.Background(), &metadata.ReadDirRequest{

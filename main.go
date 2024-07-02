@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -15,10 +19,11 @@ import (
 )
 
 const (
-	LATENCY           = 3 * time.Microsecond
-	CLIENT_PORT       = 4999
-	MDS_PORT          = 5000
-	NUM_CHUNK_SERVERS = 10
+	ADDED_LATENCY             = 0
+	CLIENT_PORT               = 4999
+	MDS_PORT                  = 5000
+	NUM_CHUNK_SERVERS         = 10
+	CLIENT_PREFETCH_THRESHOLD = 5
 )
 
 func main() {
@@ -26,7 +31,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	// create the metadata server
 	mds := metadata.New(MDS_PORT)
-	go mds.Start(LATENCY)
+	go mds.Start(ADDED_LATENCY)
 	slog.Info("mds started", "port", MDS_PORT)
 
 	// create a few files servers
@@ -35,7 +40,7 @@ func main() {
 		fsPorts = append(fsPorts, MDS_PORT+i+1)
 	}
 	for _, port := range fsPorts {
-		go files.New(port).Start(LATENCY)
+		go files.New(port).Start(ADDED_LATENCY)
 	}
 	time.Sleep(1 * time.Second)
 	for _, port := range fsPorts {
@@ -45,40 +50,16 @@ func main() {
 		slog.Info("registered chunk server", "port", port)
 	}
 
-	data := data()
-
-	c := client.New(MDS_PORT)
+	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	// create files
-	files := []string{}
-	for i := range 20 {
-		files = append(files, fmt.Sprintf("somedir/file-%d.txt", i+1))
-	}
-	for _, filename := range files {
-		if err := c.MkDir(path.Dir(filename)); err != nil {
-			log.Fatal(err)
-		}
-		r, err := c.CreateFile(filename, data)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if r != len(data) {
-			log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
-		}
-	}
+	createFoldersAndFile(c)
 
-	//  retrieve the files
-	for _, filename := range files {
-		bytes, err := c.GetFile(filename)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if len(data) != len(bytes) {
-			log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
-		}
-	}
+	// Open the CSV file
+	csvFile, writer := openCSVFile("results/results.csv")
+	defer csvFile.Close()
 
 	// do a file traversal (with and without metadata prefetching)
-	if err := traverseDirectory(c, "."); err != nil {
+	if err := traverseDirectory(c, ".", true, writer); err != nil {
 		log.Fatal(err)
 	}
 
@@ -86,39 +67,111 @@ func main() {
 
 }
 
+func createFoldersAndFile(c *client.Client) {
+	data := data()
+	for dirNum := range 2 {
+		files := []string{}
+		for i := range 15 {
+			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
+		}
+		for _, filename := range files {
+			if err := c.MkDir(path.Dir(filename)); err != nil {
+				log.Fatal(err)
+			}
+			r, err := c.CreateFile(filename, data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if r != len(data) {
+				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
+			}
+		}
+
+		//  retrieve the files
+		for _, filename := range files {
+			bytes, err := c.GetFile(filename)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(data) != len(bytes) {
+				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+			}
+		}
+	}
+
+}
+
+// Function to open the CSV file
+func openCSVFile(filePath string) (*os.File, *csv.Writer) {
+	csvFile, err := os.Create(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	writer := csv.NewWriter(csvFile)
+
+	// Write the header if the file is newly created
+	fileInfo, err := csvFile.Stat()
+	if err != nil {
+		return nil, nil
+	}
+	if fileInfo.Size() == 0 {
+		writer.Write([]string{"Timestamp", "File", "Size (bytes)", "Time Taken", "Iteration", "UseCache", "DirPath"})
+		writer.Flush()
+	}
+
+	return csvFile, writer
+}
+
 // Function to traverse the directory
-func traverseDirectory(c *client.Client, dirPath string) error {
+func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *csv.Writer) error {
 	// Open the directory
 	dir, err := c.OpenDir(dirPath)
 	if err != nil {
 		slog.Error("could not open dir")
 		return err
 	}
+
 	index := 0
 	for {
 		// Read the directory entry
-		entry, err := c.ReadDir(dir, index, false)
+		start := time.Now()
+		entry, err := c.ReadDir(dir, index, useCache)
+		took := time.Since(start)
 		if err != nil {
 			// ugly but works for now
-			if strings.Contains(err.Error(), (metadata.EndOfDirectoryError{}).Error()) {
+			switch {
+			case strings.Contains(err.Error(), (metadata.EndOfDirectoryError{}).Error()):
+				return nil
+			case errors.Is(err, io.EOF):
 				return nil
 			}
 			slog.Error(err.Error())
 			return err
 		}
 
-		// Iterate through the directory entries
-		// Print the entry name
-
 		// Check if the entry is a directory
 		if entry.IsDir {
 			// If it's a directory, recursively traverse it
 			nextPath := filepath.Join(dirPath, entry.Name)
-			fmt.Println(entry.Name + "/")
-			return traverseDirectory(c, nextPath)
+			fmt.Println(entry.Name + string(os.PathSeparator))
+			if err := traverseDirectory(c, nextPath, useCache, writer); err != nil {
+				return err
+			}
 		} else {
 			// If it's a file, perform actions on the file (e.g., print file info)
-			fmt.Printf("\t %s, %d bytes\n", entry.Name, entry.Size)
+			fmt.Printf("\t %s, %d bytes\n took %s", entry.Name, entry.Size, took)
+
+			// Write the file info to the CSV file
+			writer.Write([]string{
+				fmt.Sprint(time.Now().UnixNano()),
+				entry.Name,
+				fmt.Sprintf("%d", entry.Size),
+				took.String(),
+				fmt.Sprintf("%d", index),
+				fmt.Sprintf("%t", useCache),
+				dirPath,
+			})
+			writer.Flush()
 		}
 		index++
 	}

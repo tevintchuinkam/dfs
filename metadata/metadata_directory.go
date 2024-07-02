@@ -53,7 +53,7 @@ func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
 	if d.name == p {
 		return d, nil
 	}
-	parts := strings.Split(p, "/")
+	parts := strings.Split(p, string(os.PathSeparator))
 	currentDir := d
 
 	for _, part := range parts {
@@ -99,6 +99,13 @@ func getFileInfoAtIndex(m *MetaDataServer, dirName string, index int) (*fileInfo
 	return parent.subEntries[index], nil
 }
 
+type EntryAlreadyExistsError struct {
+	Name string
+}
+
+func (e EntryAlreadyExistsError) Error() string {
+	return fmt.Sprintf("entry with name %s already exists", e.Name)
+}
 func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 	// Find the parent directory
 	dirPath = path.Dir(dirPath)
@@ -111,7 +118,7 @@ func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 	// Check if an entry with the same name already exists
 	for _, entry := range parentDir.subEntries {
 		if entry.name == fi.name {
-			return fmt.Errorf("file or directory with the name %s already exists", fi.name)
+			return EntryAlreadyExistsError{entry.name}
 		}
 	}
 
@@ -121,9 +128,21 @@ func storeFileInfo(root *fileInfo, dirPath string, fi *fileInfo) error {
 }
 
 // entryAlreadyExists checks if a file or directory with the specified path already exists.
-func entryAlreadyExists(rootDir *fileInfo, p string) bool {
-	_, err := rootDir.walkTo(p)
-	return err == nil
+func entryAlreadyExists(root *fileInfo, p string) bool {
+	dirPath := path.Dir(p)
+	parentDir, err := root.walkTo(dirPath)
+	if err != nil {
+		return false
+	}
+	fileName := path.Base(p)
+
+	// Check if an entry with the same name already exists
+	for _, entry := range parentDir.subEntries {
+		if entry.name == fileName {
+			return true
+		}
+	}
+	return false
 }
 
 // getAllEntriesFromDir retrieves all entries from the specified directory.

@@ -25,7 +25,7 @@ var _ FileServiceServer = (*FileServer)(nil)
 func New(port int) *FileServer {
 	return &FileServer{
 		port:    port,
-		rootDir: path.Join("./", "dfs", fmt.Sprint(port)),
+		rootDir: path.Join("./", "dfs-data", fmt.Sprint(port)),
 	}
 }
 
