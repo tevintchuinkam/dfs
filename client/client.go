@@ -89,10 +89,10 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 	// request the file from mds, no caching
 	m := newMDSClient(c.mdsPort)
 	r, err := m.ReadDir(context.Background(), &metadata.ReadDirRequest{
-		Name: name,
+		Name:  name,
+		Index: int32(index),
 	})
 	if err != nil {
-		slog.Error("could not read dir", "err", err)
 		return nil, err
 	}
 	return r, nil

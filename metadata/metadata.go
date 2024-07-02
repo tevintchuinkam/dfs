@@ -203,16 +203,11 @@ func (s *MetaDataServer) OpenDir(ctx context.Context, req *OpenDirRequest) (*Ope
 }
 
 func (s *MetaDataServer) ReadDir(ctx context.Context, req *ReadDirRequest) (*FileInfo, error) {
-	p := path.Dir(req.Name)
-	// check if this is a valid directory
-	if !isDir(s.rootDir, req.Name) {
-		slog.Error("dir does not exist")
-		return nil, fmt.Errorf("the directory %s doesn't exist", p)
-	}
+	p := path.Clean(req.Name)
 
 	info, err := getFileInfoAtIndex(s, p, int(req.Index))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	return convert(info), nil
 }

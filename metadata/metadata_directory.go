@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"log/slog"
 	"os"
 	"path"
@@ -41,8 +40,6 @@ func GenerateFileTree(root *fileInfo) string {
 }
 
 func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
-	log.Println("input:")
-	log.Println(GenerateFileTree(d))
 	if d == nil {
 		slog.Error("dir is nil")
 		return nil, errors.New("dir is nil")
@@ -58,7 +55,6 @@ func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
 	}
 	parts := strings.Split(p, "/")
 	currentDir := d
-	log.Println("parts: ", parts)
 
 	for _, part := range parts {
 		if part == "" {
@@ -76,9 +72,14 @@ func (d *fileInfo) walkTo(p string) (*fileInfo, error) {
 			return nil, DirNonExistantError{part}
 		}
 	}
-	log.Println("found dir", "name", currentDir.name, "subentries", currentDir.subEntries)
-	log.Println("output: ", GenerateFileTree(currentDir))
 	return currentDir, nil
+}
+
+type EndOfDirectoryError struct {
+}
+
+func (e EndOfDirectoryError) Error() string {
+	return "end of directory reached"
 }
 
 func getFileInfoAtIndex(m *MetaDataServer, dirName string, index int) (*fileInfo, error) {
@@ -87,15 +88,12 @@ func getFileInfoAtIndex(m *MetaDataServer, dirName string, index int) (*fileInfo
 		slog.Error("directory not found", "name", dirName)
 		return nil, fmt.Errorf("directory not found: %s", dirName)
 	}
-	log.Println("parent", parent.name)
-	log.Println("subdirs")
-	for _, e := range parent.subEntries {
-		fmt.Println((e))
+	if index < 0 {
+		return nil, fmt.Errorf("negative index provided: %d", index)
 	}
-	if index < 0 || index >= len(parent.subEntries) {
-		log.Println(GenerateFileTree(m.rootDir))
-		log.Println(GenerateFileTree(parent))
-		return nil, fmt.Errorf("index %d is out of range. len_entries=%d dirName=%s", index, len(parent.subEntries), dirName)
+
+	if index >= len(parent.subEntries) {
+		return nil, EndOfDirectoryError{}
 	}
 
 	return parent.subEntries[index], nil

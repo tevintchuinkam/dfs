@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/tevintchuinkam/tdfs/client"
@@ -47,13 +47,10 @@ func main() {
 
 	data := data()
 
-	fmt.Printf("data size: %d bytes\n", len(data))
-	// interact with the different clients to store and retreive some files
-
 	c := client.New(MDS_PORT)
 	// create files
 	files := []string{}
-	for i := range 1 {
+	for i := range 20 {
 		files = append(files, fmt.Sprintf("somedir/file-%d.txt", i+1))
 	}
 	for _, filename := range files {
@@ -94,16 +91,17 @@ func traverseDirectory(c *client.Client, dirPath string) error {
 	// Open the directory
 	dir, err := c.OpenDir(dirPath)
 	if err != nil {
+		slog.Error("could not open dir")
 		return err
 	}
-	slog.Debug("openeded dir", "name", dir)
 	index := 0
 	for {
 		// Read the directory entry
 		entry, err := c.ReadDir(dir, index, false)
 		if err != nil {
-			if err == io.EOF {
-				break // End of directory
+			// ugly but works for now
+			if strings.Contains(err.Error(), (metadata.EndOfDirectoryError{}).Error()) {
+				return nil
 			}
 			slog.Error(err.Error())
 			return err
@@ -111,22 +109,19 @@ func traverseDirectory(c *client.Client, dirPath string) error {
 
 		// Iterate through the directory entries
 		// Print the entry name
-		slog.Info("Found entry", "name", entry.Name)
 
 		// Check if the entry is a directory
 		if entry.IsDir {
 			// If it's a directory, recursively traverse it
-			err = traverseDirectory(c, filepath.Join(dirPath, entry.Name))
-			if err != nil {
-				return err
-			}
+			nextPath := filepath.Join(dirPath, entry.Name)
+			fmt.Println(entry.Name + "/")
+			return traverseDirectory(c, nextPath)
 		} else {
 			// If it's a file, perform actions on the file (e.g., print file info)
-			fmt.Printf("File: %s, Size: %d bytes\n", entry.Name, entry.Size)
+			fmt.Printf("\t %s, %d bytes\n", entry.Name, entry.Size)
 		}
 		index++
 	}
-	return nil
 }
 
 func data() []byte {
