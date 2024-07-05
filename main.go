@@ -10,7 +10,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tevintchuinkam/tdfs/client"
@@ -19,22 +21,17 @@ import (
 )
 
 const (
-	ADDED_LATENCY             = 0
-	CLIENT_PORT               = 4999
-	MDS_PORT                  = 5000
-	NUM_CHUNK_SERVERS         = 10
-	CLIENT_PREFETCH_THRESHOLD = 8
-	NUM_FOLDERS               = 2
-	NUM_FILE                  = 30
-	NUM_ITERATIONS            = 30
+	CLIENT_PORT       = 4999
+	MDS_PORT          = 5000
+	NUM_CHUNK_SERVERS = 1
 )
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelError)
 	log.SetFlags(log.Lshortfile)
 	// create the metadata server
 	mds := metadata.New(MDS_PORT)
-	go mds.Start(ADDED_LATENCY)
+	go mds.Start()
 	slog.Info("mds started", "port", MDS_PORT)
 
 	// create a few files servers
@@ -43,7 +40,7 @@ func main() {
 		fsPorts = append(fsPorts, MDS_PORT+i+1)
 	}
 	for _, port := range fsPorts {
-		go files.New(port).Start(ADDED_LATENCY)
+		go files.New(port).Start()
 	}
 	time.Sleep(1 * time.Second)
 	for _, port := range fsPorts {
@@ -53,12 +50,246 @@ func main() {
 		slog.Info("registered chunk server", "port", port)
 	}
 
+	f, err := os.Create("prof.prof")
+	if err != nil {
+
+		fmt.Println(err)
+		return
+
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
+	// flatOptimisation(c)
+	gatherWorkStealingOptimisationData()
+
+	// do a grep (with and without smart data proximity)
+}
+
+func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
+	const (
+		CLIENT_PREFETCH_THRESHOLD = 8
+		LEVELS                    = 2 // depth of the folders
+		FOLDER_PER_LEVEL          = 8 // number of folders in each level
+		FILES_PER_LEVEL           = 3 // number of files in each folder
+	)
+	if level > LEVELS {
+		return
+	}
+
+	for i := 0; i < FOLDER_PER_LEVEL; i++ {
+		subDir := fmt.Sprintf("%s/dir-%d", dir, i+1)
+		if err := c.MkDir(subDir); err != nil {
+			log.Fatal(err)
+		}
+
+		// Create files in the current directory
+		for j := 0; j < FILES_PER_LEVEL; j++ {
+			filename := fmt.Sprintf("%s/file-%d.txt", subDir, j+1)
+			r, err := c.CreateFile(filename, data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if r != len(data) {
+				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), r)
+			}
+		}
+
+		// Recursive call to create subdirectories and files
+		createFilesAndDirs(c, subDir, level+1, data)
+	}
+}
+
+func gatherWorkStealingOptimisationData() {
+	const CLIENT_PREFETCH_THRESHOLD = 8
+	const NUM_ITERATIONS = 10
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	// create files
-	createFoldersAndFile(c)
+	data := data()
+	createFilesAndDirs(c, ".", 1, data)
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/results.csv")
+	csvFile, writer := openCSVFile("results/results_workstealing.csv", []string{"Algo", "Iteration", "Time Taken"})
+	defer csvFile.Close()
+
+	type TraversalAlgo struct {
+		traverse func(*client.Client, string, bool) error
+		name     string
+	}
+
+	// do a file traversal (with and without metadata prefetching)
+	useCache := false
+	for i := range NUM_ITERATIONS {
+		for _, algo := range [](TraversalAlgo){
+			TraversalAlgo{
+				traverse: traverseDirectorySimple,
+				name:     "simple",
+			},
+			TraversalAlgo{
+				traverse: traverseDirectoryWorkStealing,
+				name:     "workstealing",
+			},
+		} {
+			slog.Info("iteration", "count", i)
+			c.ClearCache()
+			start := time.Now()
+			if err := algo.traverse(c, ".", useCache); err != nil {
+				log.Fatal(err)
+			}
+			took := time.Since(start)
+			if err := writer.Write(
+				[]string{
+					algo.name,
+					fmt.Sprint(i),
+					took.String(),
+				},
+			); err != nil {
+				log.Fatal(err)
+			}
+			writer.Flush()
+		}
+	}
+}
+
+func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bool) error {
+	var wgWork sync.WaitGroup
+	work := make(chan string, 100)
+	defer close(work)
+	// work <- workRes{[]string{dirPath}}
+	work <- dirPath
+	wgWork.Add(1)
+	done := make(map[int]bool)
+	var muDone sync.Mutex
+
+	// Number of workers
+	numWorkers := 8
+	for i := range numWorkers {
+		muDone.Lock()
+		done[i] = false
+		muDone.Unlock()
+		go func(id int) {
+			for w := range work {
+				// Open the directory
+				dir, err := c.OpenDir(w)
+				if err != nil {
+					slog.Error("could not open dir")
+					wgWork.Done()
+					continue
+				}
+				index := 0
+				for {
+					// Read the directory entry
+					entry, err := c.ReadDir(dir, index, useCache)
+					if err != nil {
+						// Ugly but works for now
+						switch {
+						case strings.Contains(err.Error(), (metadata.EndOfDirectoryError{}).Error()):
+							break
+						case errors.Is(err, io.EOF):
+							break
+						default:
+							slog.Error(err.Error())
+						}
+						break
+					}
+					if entry.IsDir {
+						nextPath := filepath.Join(w, entry.Name)
+						// adding more work
+						wgWork.Add(1)
+						work <- nextPath
+					} else {
+						fmt.Println(filepath.Join(w, entry.Name))
+					}
+					index++
+				}
+				// we finished one piece of work
+				wgWork.Done()
+			}
+		}(i)
+	}
+	// Wait for all goroutines to finish
+	wgWork.Wait()
+	return nil
+}
+
+func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool) error {
+	// Open the directory
+	dir, err := c.OpenDir(dirPath)
+	if err != nil {
+		slog.Error("could not open dir")
+		return err
+	}
+
+	index := 0
+	for {
+		entry, err := c.ReadDir(dir, index, useCache)
+		if err != nil {
+			// ugly but works for now
+			switch {
+			case strings.Contains(err.Error(), (metadata.EndOfDirectoryError{}).Error()):
+				return nil
+			case errors.Is(err, io.EOF):
+				return nil
+			}
+			slog.Error(err.Error())
+			return err
+		}
+
+		// Check if the entry is a directory
+		if entry.IsDir {
+			// If it's a directory, recursively traverse it
+			nextPath := filepath.Join(dirPath, entry.Name)
+			if err := traverseDirectorySimple(c, nextPath, useCache); err != nil {
+				return err
+			}
+		} else {
+			// Write the file info to the CSV file
+			fmt.Println(filepath.Join(dirPath, entry.Name))
+		}
+		index++
+	}
+}
+
+func gatherFlatOptimisationData() {
+	const CLIENT_PREFETCH_THRESHOLD = 8
+	const NUM_FOLDERS = 2
+	const NUM_FILE = 30
+	const NUM_ITERATIONS = 30
+	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
+	// create files
+	data := data()
+	for dirNum := range NUM_FOLDERS {
+		files := []string{}
+		for i := range NUM_FILE {
+			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
+		}
+		for _, filename := range files {
+			if err := c.MkDir(path.Dir(filename)); err != nil {
+				log.Fatal(err)
+			}
+			r, err := c.CreateFile(filename, data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if r != len(data) {
+				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
+			}
+		}
+
+		//  retrieve the files
+		for _, filename := range files {
+			bytes, err := c.GetFile(filename)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(data) != len(bytes) {
+				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+			}
+		}
+	}
+
+	// Open the CSV file
+	csvFile, writer := openCSVFile("results/results.csv", []string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
 	defer csvFile.Close()
 
 	// do a file traversal (with and without metadata prefetching)
@@ -66,17 +297,15 @@ func main() {
 		for iteration := range NUM_ITERATIONS {
 			// wait until cache is empty
 			c.ClearCache()
-			if err := traverseDirectory(c, ".", useCache, writer, iteration); err != nil {
+			if err := computeReadDirTime(c, ".", useCache, writer, iteration); err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
-	// do a grep (with and without smart data proximity)
-
 }
 
 // Function to traverse the directory
-func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *csv.Writer, iteration int) error {
+func computeReadDirTime(c *client.Client, dirPath string, useCache bool, writer *csv.Writer, iteration int) error {
 	// Open the directory
 	dir, err := c.OpenDir(dirPath)
 	if err != nil {
@@ -106,7 +335,7 @@ func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *
 		if entry.IsDir {
 			// If it's a directory, recursively traverse it
 			nextPath := filepath.Join(dirPath, entry.Name)
-			if err := traverseDirectory(c, nextPath, useCache, writer, iteration); err != nil {
+			if err := computeReadDirTime(c, nextPath, useCache, writer, iteration); err != nil {
 				return err
 			}
 		} else {
@@ -124,7 +353,7 @@ func traverseDirectory(c *client.Client, dirPath string, useCache bool, writer *
 }
 
 // Function to open the CSV file
-func openCSVFile(filePath string) (*os.File, *csv.Writer) {
+func openCSVFile(filePath string, headers []string) (*os.File, *csv.Writer) {
 	csvFile, err := os.Create(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -137,7 +366,7 @@ func openCSVFile(filePath string) (*os.File, *csv.Writer) {
 		return nil, nil
 	}
 	if fileInfo.Size() == 0 {
-		writer.Write([]string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
+		writer.Write(headers)
 		writer.Flush()
 	}
 
@@ -174,37 +403,4 @@ func data() []byte {
 
 		- Robert Frost
 	`)
-}
-func createFoldersAndFile(c *client.Client) {
-	data := data()
-	for dirNum := range NUM_FOLDERS {
-		files := []string{}
-		for i := range NUM_FILE {
-			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
-		}
-		for _, filename := range files {
-			if err := c.MkDir(path.Dir(filename)); err != nil {
-				log.Fatal(err)
-			}
-			r, err := c.CreateFile(filename, data)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if r != len(data) {
-				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
-			}
-		}
-
-		//  retrieve the files
-		for _, filename := range files {
-			bytes, err := c.GetFile(filename)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if len(data) != len(bytes) {
-				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
-			}
-		}
-	}
-
 }

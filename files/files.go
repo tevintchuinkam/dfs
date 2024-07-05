@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"time"
 
 	grpc "google.golang.org/grpc"
 )
@@ -76,7 +75,7 @@ func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*File, er
 }
 
 // if all goes well, this function will not return
-func (s *FileServer) Start(requestDelay time.Duration) {
+func (s *FileServer) Start() {
 	// accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)

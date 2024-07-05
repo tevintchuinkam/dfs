@@ -60,7 +60,7 @@ func New(port int) *MetaDataServer {
 	}
 }
 
-func (s *MetaDataServer) Start(requestDelay time.Duration) {
+func (s *MetaDataServer) Start() {
 	// accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)
@@ -114,12 +114,10 @@ func (s *MetaDataServer) MkDir(ctx context.Context, in *MkDirRequest) (*MkDirRes
 	// Lock the directory structure and create the new directory
 	s.muDir.Lock()
 	defer s.muDir.Unlock()
-
 	newDir := &fileInfo{
-		name:  dir,
+		name:  path.Base(dir),
 		isDir: true,
 	}
-
 	err := storeFileInfo(s.rootDir, dir, newDir)
 	if err != nil {
 		slog.Error("failed to store new directory info", "dir", dir, "error", err)
