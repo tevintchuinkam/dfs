@@ -71,17 +71,6 @@ func stopAllServers() {
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelError)
 	log.SetFlags(log.Lshortfile)
-	/*
-		f, err := os.Create("prof.prof")
-		if err != nil {
-
-			fmt.Println(err)
-			return
-
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	*/
 	// Parse command-line flags for example  -iterations=1 -functions=flat
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
 	functions := flag.String("functions", "all", "comma-separated list of functions to run: flat, stealing, grep")
@@ -104,18 +93,16 @@ func main() {
 		fmt.Printf("gather data_proximity for flat optimization with a redundancy  of %d iterations...\n", *iterations)
 		gatherGrepOptimizationData(*iterations)
 	}
-
-	// do a grep (with and without smart data proximity)
 }
 
 func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int) {
 	const (
 		CLIENT_PREFETCH_THRESHOLD = 8
-		LEVELS                    = 2 // depth of the folders
+		LEVELS                    = 2
 	)
 
 	var FOLDER_PER_LEVEL = foldersPerLevel
-	var FILES_PER_FOLDER = filesPerFolder // number of files in each folder
+	var FILES_PER_FOLDER = filesPerFolder
 	if level > LEVELS {
 		return
 	}
@@ -400,32 +387,34 @@ func gatherFlatOptimisationData(iterations int) {
 	startAllServers()
 	// create files
 	data := generateData(1)
-	for dirNum := range NUM_FOLDERS {
-		files := []string{}
-		for i := range NUM_FILE {
-			files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
-		}
-		for _, filename := range files {
-			if err := c.MkDir(path.Dir(filename)); err != nil {
-				log.Fatal(err)
+	createFiles := func() {
+		for dirNum := range NUM_FOLDERS {
+			files := []string{}
+			for i := range NUM_FILE {
+				files = append(files, fmt.Sprintf("dir-%d/file-%d.txt", dirNum+1, i+1))
 			}
-			r, err := c.CreateFile(filename, data)
-			if err != nil {
-				log.Fatal(err)
+			for _, filename := range files {
+				if err := c.MkDir(path.Dir(filename)); err != nil {
+					log.Fatal(err)
+				}
+				r, err := c.CreateFile(filename, data)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if r != len(data) {
+					log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
+				}
 			}
-			if r != len(data) {
-				log.Fatalf("expected to write %d bytes but wrote %d bytes", len(data), len(data))
-			}
-		}
 
-		//  retrieve the files
-		for _, filename := range files {
-			bytes, err := c.GetFile(filename)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if len(data) != len(bytes) {
-				log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+			//  retrieve the files
+			for _, filename := range files {
+				bytes, err := c.GetFile(filename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if len(data) != len(bytes) {
+					log.Fatalf("wrote %d bytes but only retrieved %d", len(data), len(bytes))
+				}
 			}
 		}
 	}
@@ -441,6 +430,7 @@ func gatherFlatOptimisationData(iterations int) {
 			stopAllServers()
 			startAllServers()
 			c.ClearCache()
+			createFiles()
 			if err := computeReadDirTime(c, ".", useCache, writer, iteration); err != nil {
 				log.Fatal(err)
 			}
