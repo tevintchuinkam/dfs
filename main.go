@@ -147,7 +147,7 @@ func gatherGrepOptimizationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	for _, useCache := range []bool{true, false} {
-		for fileSizeMB := 1; fileSizeMB < 400; fileSizeMB += 50 {
+		for fileSizeMB := 1; fileSizeMB < 200; fileSizeMB += 25 {
 			for _, dataProximity := range []bool{true, false} {
 				for i := range NUM_ITERATIONS {
 					for _, algo := range [](TraversalAlgo){
