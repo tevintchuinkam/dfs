@@ -147,7 +147,7 @@ func gatherGrepOptimizationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	for _, useCache := range []bool{true, false} {
-		for fileSizeKb := 1; fileSizeKb < 4000; fileSizeKb += 500 {
+		for fileSizeKb := 1; fileSizeKb < 40000; fileSizeKb += 5000 {
 			for _, dataProximity := range []bool{true, false} {
 				for i := range NUM_ITERATIONS {
 					for _, algo := range [](TraversalAlgo){
@@ -158,7 +158,7 @@ func gatherGrepOptimizationData(iterations int) {
 					} {
 						stopAllServers()
 						startAllServers()
-						createFilesAndDirs(c, ".", 1, generateData(fileSizeKb), 5, 2)
+						createFilesAndDirs(c, ".", 1, generateData(fileSizeKb), 2, 2)
 						c.ClearCache()
 						totalCount := new(int) // total count of the searched word
 						mu := new(sync.Mutex)

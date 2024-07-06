@@ -5,8 +5,8 @@ protos:
 	    protoc --go_out=.. --go-grpc_out=.. $$proto_file; \
 	done
 
-venv: 
-	source analysis/bin/activate
+build: 
+	go build .
 
 
 
