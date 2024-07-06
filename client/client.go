@@ -213,6 +213,19 @@ func (c *Client) GetFileFromPort(port int32, name string) ([]byte, error) {
 	return fr.Data, nil
 }
 
+func (c *Client) GrepOnFileServer(fileName string, word string, port int32) (int, error) {
+
+	fs := helpers.NewFileServiceClient(port)
+	r, err := fs.Grep(context.Background(), &files.GrepRequest{
+		FileName: fileName,
+		Word:     word,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(r.Count), nil
+}
+
 func newMDSClient(port int) metadata.MetadataServiceClient {
 	var conn *grpc.ClientConn
 	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))

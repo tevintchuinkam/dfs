@@ -10,6 +10,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/tevintchuinkam/tdfs/grep"
+
 	grpc "google.golang.org/grpc"
 )
 
@@ -87,4 +89,21 @@ func (s *FileServer) Start() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (s *FileServer) Grep(ctx context.Context, req *GrepRequest) (*GrepResponse, error) {
+	file, err := os.Open(path.Join(s.rootDir, path.Clean(req.FileName)))
+	if err != nil {
+		slog.Error("could not open file", "err", err)
+		return nil, err
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		slog.Error("could not read bytes from file", "file", req.FileName, "err", err)
+		return nil, err
+	}
+	count := grep.CountWordOccurrences(bytes, req.Word)
+	return &GrepResponse{
+		Count: int64(count),
+	}, nil
 }

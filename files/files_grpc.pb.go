@@ -25,6 +25,7 @@ type FileServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*File, error)
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
+	Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepResponse, error)
 }
 
 type fileServiceClient struct {
@@ -62,6 +63,15 @@ func (c *fileServiceClient) CreateFile(ctx context.Context, in *CreateFileReques
 	return out, nil
 }
 
+func (c *fileServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepResponse, error) {
+	out := new(GrepResponse)
+	err := c.cc.Invoke(ctx, "/files.FileService/Grep", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type FileServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	GetFile(context.Context, *GetFileRequest) (*File, error)
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
+	Grep(context.Context, *GrepRequest) (*GrepResponse, error)
 	mustEmbedUnimplementedFileServiceServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedFileServiceServer) GetFile(context.Context, *GetFileRequest) 
 }
 func (UnimplementedFileServiceServer) CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateFile not implemented")
+}
+func (UnimplementedFileServiceServer) Grep(context.Context, *GrepRequest) (*GrepResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Grep not implemented")
 }
 func (UnimplementedFileServiceServer) mustEmbedUnimplementedFileServiceServer() {}
 
@@ -152,6 +166,24 @@ func _FileService_CreateFile_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FileService_Grep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileServiceServer).Grep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/files.FileService/Grep",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileServiceServer).Grep(ctx, req.(*GrepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FileService_ServiceDesc is the grpc.ServiceDesc for FileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateFile",
 			Handler:    _FileService_CreateFile_Handler,
+		},
+		{
+			MethodName: "Grep",
+			Handler:    _FileService_Grep_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

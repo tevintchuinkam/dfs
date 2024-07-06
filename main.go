@@ -16,7 +16,7 @@ import (
 
 	"github.com/tevintchuinkam/tdfs/client"
 	"github.com/tevintchuinkam/tdfs/files"
-	"github.com/tevintchuinkam/tdfs/helpers"
+	"github.com/tevintchuinkam/tdfs/grep"
 	"github.com/tevintchuinkam/tdfs/metadata"
 )
 
@@ -67,17 +67,18 @@ func main() {
 	// do a grep (with and without smart data proximity)
 }
 
-func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, foldersPerLevel int) {
+func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
 	const (
 		CLIENT_PREFETCH_THRESHOLD = 8
-		LEVELS                    = 3 // depth of the folders
-		FILES_PER_LEVEL           = 3 // number of files in each folder
+		LEVELS                    = 3  // depth of the folders
+		FILES_PER_LEVEL           = 20 // number of files in each folder
+		FOLDER_PER_LEVEL          = 4
 	)
 	if level > LEVELS {
 		return
 	}
 
-	for i := 0; i < foldersPerLevel; i++ {
+	for i := 0; i < FOLDER_PER_LEVEL; i++ {
 		subDir := fmt.Sprintf("%s/dir-%d", dir, i+1)
 		if err := c.MkDir(subDir); err != nil {
 			log.Fatal(err)
@@ -96,19 +97,18 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, fo
 		}
 
 		// Recursive call to create subdirectories and files
-		createFilesAndDirs(c, subDir, level+1, data, foldersPerLevel)
+		createFilesAndDirs(c, subDir, level+1, data)
 	}
 }
 
 func gatherGrepOptimizationData() {
 	const CLIENT_PREFETCH_THRESHOLD = 8
-	const NUM_ITERATIONS = 10
+	const NUM_ITERATIONS = 5
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	// create files
-	data := data()
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/results_workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
+	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeKB", "UseCache", "DataProximity"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -117,56 +117,72 @@ func gatherGrepOptimizationData() {
 	}
 
 	// do a file traversal (with and without metadata prefetching)
-	useCache := false
-	for foldersPerLevel := range 1 {
-		c.DeleteAllData()
-		createFilesAndDirs(c, ".", 1, data, foldersPerLevel+1)
-		for i := range NUM_ITERATIONS {
-			for _, algo := range [](TraversalAlgo){
-				TraversalAlgo{
-					traverse: traverseDirectorySimple,
-					name:     "simple",
-				},
-				TraversalAlgo{
-					traverse: traverseDirectoryWorkStealing,
-					name:     "workstealing",
-				},
-			} {
-				slog.Info("iteration", "count", i)
-				c.ClearCache()
-				start := time.Now()
-				totalCount := new(int) // total count of the searched word
-				mu := new(sync.Mutex)
-				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo) {
-					// fetch the file from the chunk server
-					bytes, err := c.GetFileFromPort(file.Port, file.FullPath)
-					if err != nil {
-						log.Fatal(err)
-					}
-					word := "And"
-					total := helpers.CountWordOccurrences(bytes, word)
-					fmt.Printf("found %s %d times in file %s of size %d\n", word, total, file.FullPath, file.Size)
-					mu.Lock()
-					*totalCount += total
-					mu.Unlock()
+	for _, useCache := range []bool{true, false} {
+		for fileSizeKb := 1; fileSizeKb < 5000; fileSizeKb += 500 {
+			c.DeleteAllData()
+			createFilesAndDirs(c, ".", 1, generateData(fileSizeKb))
+			for _, dataProximity := range []bool{true, false} {
+				for i := range NUM_ITERATIONS {
+					for _, algo := range [](TraversalAlgo){
+						TraversalAlgo{
+							traverse: traverseDirectoryWorkStealing,
+							name:     "workstealing",
+						},
+					} {
+						c.ClearCache()
+						start := time.Now()
+						totalCount := new(int) // total count of the searched word
+						mu := new(sync.Mutex)
+						word := "And"
+						var f func(*metadata.FileInfo)
+						if !dataProximity {
+							f = func(file *metadata.FileInfo) {
+								// fetch the file from the chunk server
+								bytes, err := c.GetFileFromPort(file.Port, file.FullPath)
+								if err != nil {
+									log.Fatal(err)
+								}
+								total := grep.CountWordOccurrences(bytes, word)
+								fmt.Printf("found %s %d times in file %s of size %d\n", word, total, file.FullPath, file.Size)
+								mu.Lock()
+								*totalCount += total
+								mu.Unlock()
 
-				}); err != nil {
-					log.Fatal(err)
+							}
+						} else {
+							f = func(file *metadata.FileInfo) {
+								// compute the count on the fileserver and reduce on the client
+								count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
+								if err != nil {
+									log.Fatal(err)
+								}
+								fmt.Printf("found %s %d times in file %s of size %d\n", word, count, file.FullPath, file.Size)
+								mu.Lock()
+								*totalCount += count
+								mu.Unlock()
+							}
+						}
+						if err := algo.traverse(c, ".", useCache, f); err != nil {
+							log.Fatal(err)
+						}
+						took := time.Since(start)
+						if err := writer.Write(
+							[]string{
+								algo.name,
+								fmt.Sprint(i),
+								took.String(),
+								fmt.Sprint(fileSizeKb),
+								fmt.Sprint(useCache),
+								fmt.Sprint(dataProximity),
+							},
+						); err != nil {
+							log.Fatal(err)
+						}
+						writer.Flush()
+					}
 				}
-				fmt.Printf("total count of the word 'road': %d\n", *totalCount)
-				took := time.Since(start)
-				if err := writer.Write(
-					[]string{
-						algo.name,
-						fmt.Sprint(i),
-						took.String(),
-						fmt.Sprint(foldersPerLevel),
-					},
-				); err != nil {
-					log.Fatal(err)
-				}
-				writer.Flush()
 			}
+
 		}
 	}
 }
@@ -176,10 +192,10 @@ func gatherWorkStealingOptimisationData() {
 	const NUM_ITERATIONS = 10
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	// create files
-	data := data()
+	data := generateData(1)
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/results_workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
+	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -191,7 +207,7 @@ func gatherWorkStealingOptimisationData() {
 	useCache := false
 	for foldersPerLevel := range 8 {
 		c.DeleteAllData()
-		createFilesAndDirs(c, ".", 1, data, foldersPerLevel+1)
+		createFilesAndDirs(c, ".", 1, data)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
@@ -332,7 +348,7 @@ func gatherFlatOptimisationData() {
 	const NUM_ITERATIONS = 30
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	// create files
-	data := data()
+	data := generateData(1)
 	for dirNum := range NUM_FOLDERS {
 		files := []string{}
 		for i := range NUM_FILE {
@@ -364,7 +380,7 @@ func gatherFlatOptimisationData() {
 	}
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/results.csv", []string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
+	csvFile, writer := openCSVFile("results/flat.csv", []string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
 	defer csvFile.Close()
 
 	// do a file traversal (with and without metadata prefetching)
@@ -448,8 +464,9 @@ func openCSVFile(filePath string, headers []string) (*os.File, *csv.Writer) {
 	return csvFile, writer
 }
 
-func data() []byte {
-	d := []byte(`
+func generateData(kb int) []byte {
+	// Define the base data
+	baseData := []byte(`
 		The Road Not Taken
 
 		Two roads diverged in a yellow wood,
@@ -478,9 +495,21 @@ func data() []byte {
 
 		- Robert Frost
 	`)
-	data := []byte{}
-	for range 1000 {
-		data = append(data, d...)
+
+	// Calculate the total number of bytes needed
+	totalBytes := kb * 1024
+
+	// Create a buffer to hold the result
+	data := make([]byte, 0, totalBytes)
+
+	// Repeat the base data until the required size is reached
+	for len(data) < totalBytes {
+		if len(data)+len(baseData) > totalBytes {
+			data = append(data, baseData[:totalBytes-len(data)]...)
+		} else {
+			data = append(data, baseData...)
+		}
 	}
+
 	return data
 }

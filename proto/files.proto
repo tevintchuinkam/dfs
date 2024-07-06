@@ -27,8 +27,18 @@ message CreateFileResponse {
     int64 bytesWritten = 1;
 }
 
+message GrepRequest {
+    string fileName = 1;
+    string word = 2;
+}
+
+message GrepResponse {
+    int64 count = 1;
+}
+
 service FileService {
     rpc Ping(PingRequest) returns (PingResponse);
     rpc GetFile(GetFileRequest) returns (File);
     rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
+    rpc Grep(GrepRequest) returns (GrepResponse);
 }
