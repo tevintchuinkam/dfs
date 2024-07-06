@@ -21,9 +21,9 @@ import (
 	"github.com/tevintchuinkam/tdfs/metadata"
 )
 
-const (
-	CLIENT_PORT       = 49999
-	MDS_PORT          = 50000
+var (
+	MDS_PORT          = 48230
+	CLIENT_PORT       = MDS_PORT - 1
 	NUM_CHUNK_SERVERS = 8
 )
 
