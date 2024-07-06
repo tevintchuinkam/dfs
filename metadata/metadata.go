@@ -115,8 +115,9 @@ func (s *MetaDataServer) MkDir(ctx context.Context, in *MkDirRequest) (*MkDirRes
 	s.muDir.Lock()
 	defer s.muDir.Unlock()
 	newDir := &fileInfo{
-		name:  path.Base(dir),
-		isDir: true,
+		name:     path.Base(dir),
+		fullPath: dir,
+		isDir:    true,
 	}
 	err := storeFileInfo(s.rootDir, dir, newDir)
 	if err != nil {
@@ -159,10 +160,11 @@ func (s *MetaDataServer) RegisterFileCreation(ctx context.Context, req *RecReque
 	min.muLoad.Unlock()
 	s.muDir.Lock()
 	if err := storeFileInfo(s.rootDir, p, &fileInfo{
-		name:  path.Base(p),
-		size:  req.FileSize,
-		port:  min.port,
-		isDir: false,
+		name:     path.Base(p),
+		fullPath: p,
+		size:     req.FileSize,
+		port:     min.port,
+		isDir:    false,
 	}); err != nil {
 		log.Fatal(err)
 	}
@@ -196,6 +198,14 @@ func (s *MetaDataServer) OpenDir(ctx context.Context, req *OpenDirRequest) (*Ope
 	}, nil
 }
 
+func (s *MetaDataServer) DeleteAllData(ctx context.Context, req *DeleteAllDataRequest) (*DeleteAllDataReponse, error) {
+	s.rootDir = &fileInfo{
+		name:  ".",
+		isDir: true,
+	}
+	return &DeleteAllDataReponse{}, nil
+}
+
 func (s *MetaDataServer) ReadDir(ctx context.Context, req *ReadDirRequest) (*FileInfo, error) {
 	p := path.Clean(req.Name)
 
@@ -208,12 +218,13 @@ func (s *MetaDataServer) ReadDir(ctx context.Context, req *ReadDirRequest) (*Fil
 
 func convert(f *fileInfo) *FileInfo {
 	return &FileInfo{
-		Name:    f.name,
-		Size:    f.size,
-		Mode:    int32(fs.ModePerm),
-		ModTime: time.Now().String(),
-		IsDir:   f.isDir,
-		Port:    int32(f.port),
+		Name:     f.name,
+		FullPath: f.fullPath,
+		Size:     f.size,
+		Mode:     int32(fs.ModePerm),
+		ModTime:  time.Now().String(),
+		IsDir:    f.isDir,
+		Port:     int32(f.port),
 	}
 }
 

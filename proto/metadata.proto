@@ -39,6 +39,7 @@ message FileInfo {
     string modTime = 4;
     bool isDir = 5;
     int32 port = 6;
+    string fullPath = 7;
 }
 
 message ReadDirAllResponse {
@@ -53,6 +54,9 @@ message MkDirResponse {
     string name = 1;
 }
 
+message DeleteAllDataRequest {}
+message DeleteAllDataReponse {}
+
 service MetadataService {
     rpc RegisterFileCreation(RecRequest) returns (RecResponse);
     rpc GetLocation(LocRequest) returns (LocResponse);
@@ -60,4 +64,5 @@ service MetadataService {
     rpc ReadDir(ReadDirRequest) returns (FileInfo);
     rpc ReadDirAll(ReadDirRequest) returns (ReadDirAllResponse);
     rpc MkDir(MkDirRequest) returns (MkDirResponse);
+    rpc DeleteAllData(DeleteAllDataRequest) returns (DeleteAllDataReponse);
 }

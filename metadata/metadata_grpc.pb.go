@@ -28,6 +28,7 @@ type MetadataServiceClient interface {
 	ReadDir(ctx context.Context, in *ReadDirRequest, opts ...grpc.CallOption) (*FileInfo, error)
 	ReadDirAll(ctx context.Context, in *ReadDirRequest, opts ...grpc.CallOption) (*ReadDirAllResponse, error)
 	MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error)
+	DeleteAllData(ctx context.Context, in *DeleteAllDataRequest, opts ...grpc.CallOption) (*DeleteAllDataReponse, error)
 }
 
 type metadataServiceClient struct {
@@ -92,6 +93,15 @@ func (c *metadataServiceClient) MkDir(ctx context.Context, in *MkDirRequest, opt
 	return out, nil
 }
 
+func (c *metadataServiceClient) DeleteAllData(ctx context.Context, in *DeleteAllDataRequest, opts ...grpc.CallOption) (*DeleteAllDataReponse, error) {
+	out := new(DeleteAllDataReponse)
+	err := c.cc.Invoke(ctx, "/metadata.MetadataService/DeleteAllData", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MetadataServiceServer is the server API for MetadataService service.
 // All implementations must embed UnimplementedMetadataServiceServer
 // for forward compatibility
@@ -102,6 +112,7 @@ type MetadataServiceServer interface {
 	ReadDir(context.Context, *ReadDirRequest) (*FileInfo, error)
 	ReadDirAll(context.Context, *ReadDirRequest) (*ReadDirAllResponse, error)
 	MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error)
+	DeleteAllData(context.Context, *DeleteAllDataRequest) (*DeleteAllDataReponse, error)
 	mustEmbedUnimplementedMetadataServiceServer()
 }
 
@@ -126,6 +137,9 @@ func (UnimplementedMetadataServiceServer) ReadDirAll(context.Context, *ReadDirRe
 }
 func (UnimplementedMetadataServiceServer) MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MkDir not implemented")
+}
+func (UnimplementedMetadataServiceServer) DeleteAllData(context.Context, *DeleteAllDataRequest) (*DeleteAllDataReponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllData not implemented")
 }
 func (UnimplementedMetadataServiceServer) mustEmbedUnimplementedMetadataServiceServer() {}
 
@@ -248,6 +262,24 @@ func _MetadataService_MkDir_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MetadataService_DeleteAllData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAllDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetadataServiceServer).DeleteAllData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/metadata.MetadataService/DeleteAllData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetadataServiceServer).DeleteAllData(ctx, req.(*DeleteAllDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MetadataService_ServiceDesc is the grpc.ServiceDesc for MetadataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +310,10 @@ var MetadataService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MkDir",
 			Handler:    _MetadataService_MkDir_Handler,
+		},
+		{
+			MethodName: "DeleteAllData",
+			Handler:    _MetadataService_DeleteAllData_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

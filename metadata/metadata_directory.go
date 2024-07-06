@@ -21,6 +21,7 @@ type fileInfo struct {
 	prev       *fileInfo
 	sys        any
 	port       int
+	fullPath   string
 }
 
 // GenerateFileTree generates the file tree starting from the given root and returns it as a string.

@@ -47,6 +47,14 @@ func New(mdsPort int, pefetchThreshold int) *Client {
 	}
 }
 
+func (c *Client) DeleteAllData() {
+	m := newMDSClient(c.mdsPort)
+	_, err := m.DeleteAllData(context.Background(), &metadata.DeleteAllDataRequest{})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func (c *Client) ClearCache() {
 	dirs := make(map[dirName]dirContents)
 	c.cache = &ClientCache{
@@ -183,6 +191,18 @@ func (c *Client) GetFile(name string) ([]byte, error) {
 		return nil, err
 	}
 	fs := helpers.NewFileServiceClient(loc.Port)
+	fr, err := fs.GetFile(context.Background(), &files.GetFileRequest{
+		Name: name,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, err
+	}
+	return fr.Data, nil
+}
+
+func (c *Client) GetFileFromPort(port int32, name string) ([]byte, error) {
+	fs := helpers.NewFileServiceClient(port)
 	fr, err := fs.GetFile(context.Background(), &files.GetFileRequest{
 		Name: name,
 	})
