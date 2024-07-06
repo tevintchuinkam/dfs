@@ -26,6 +26,7 @@ type FileServiceClient interface {
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*File, error)
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepResponse, error)
+	CreateFileWithStream(ctx context.Context, opts ...grpc.CallOption) (FileService_CreateFileWithStreamClient, error)
 }
 
 type fileServiceClient struct {
@@ -72,6 +73,40 @@ func (c *fileServiceClient) Grep(ctx context.Context, in *GrepRequest, opts ...g
 	return out, nil
 }
 
+func (c *fileServiceClient) CreateFileWithStream(ctx context.Context, opts ...grpc.CallOption) (FileService_CreateFileWithStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &FileService_ServiceDesc.Streams[0], "/files.FileService/CreateFileWithStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &fileServiceCreateFileWithStreamClient{stream}
+	return x, nil
+}
+
+type FileService_CreateFileWithStreamClient interface {
+	Send(*CreateFileWithStreamRequest) error
+	CloseAndRecv() (*CreateFileWithStreamResponse, error)
+	grpc.ClientStream
+}
+
+type fileServiceCreateFileWithStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *fileServiceCreateFileWithStreamClient) Send(m *CreateFileWithStreamRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *fileServiceCreateFileWithStreamClient) CloseAndRecv() (*CreateFileWithStreamResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(CreateFileWithStreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility
@@ -80,6 +115,7 @@ type FileServiceServer interface {
 	GetFile(context.Context, *GetFileRequest) (*File, error)
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	Grep(context.Context, *GrepRequest) (*GrepResponse, error)
+	CreateFileWithStream(FileService_CreateFileWithStreamServer) error
 	mustEmbedUnimplementedFileServiceServer()
 }
 
@@ -98,6 +134,9 @@ func (UnimplementedFileServiceServer) CreateFile(context.Context, *CreateFileReq
 }
 func (UnimplementedFileServiceServer) Grep(context.Context, *GrepRequest) (*GrepResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Grep not implemented")
+}
+func (UnimplementedFileServiceServer) CreateFileWithStream(FileService_CreateFileWithStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method CreateFileWithStream not implemented")
 }
 func (UnimplementedFileServiceServer) mustEmbedUnimplementedFileServiceServer() {}
 
@@ -184,6 +223,32 @@ func _FileService_Grep_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FileService_CreateFileWithStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FileServiceServer).CreateFileWithStream(&fileServiceCreateFileWithStreamServer{stream})
+}
+
+type FileService_CreateFileWithStreamServer interface {
+	SendAndClose(*CreateFileWithStreamResponse) error
+	Recv() (*CreateFileWithStreamRequest, error)
+	grpc.ServerStream
+}
+
+type fileServiceCreateFileWithStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *fileServiceCreateFileWithStreamServer) SendAndClose(m *CreateFileWithStreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *fileServiceCreateFileWithStreamServer) Recv() (*CreateFileWithStreamRequest, error) {
+	m := new(CreateFileWithStreamRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // FileService_ServiceDesc is the grpc.ServiceDesc for FileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -208,6 +273,12 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FileService_Grep_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "CreateFileWithStream",
+			Handler:       _FileService_CreateFileWithStream_Handler,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "files.proto",
 }

@@ -36,9 +36,25 @@ message GrepResponse {
     int64 count = 1;
 }
 
+message CreateFileWithStreamRequest {
+  oneof data {
+    FileInfo info = 1;
+    bytes chunk_data = 2;
+  };
+}
+
+message FileInfo {
+    string name = 1;
+}
+
+message CreateFileWithStreamResponse {
+    int64 bytesWritten = 1;
+}
+
 service FileService {
     rpc Ping(PingRequest) returns (PingResponse);
     rpc GetFile(GetFileRequest) returns (File);
     rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
     rpc Grep(GrepRequest) returns (GrepResponse);
+    rpc CreateFileWithStream(stream CreateFileWithStreamRequest) returns (CreateFileWithStreamResponse);
 }

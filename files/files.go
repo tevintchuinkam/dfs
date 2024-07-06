@@ -129,3 +129,48 @@ func (s *FileServer) Grep(ctx context.Context, req *GrepRequest) (*GrepResponse,
 		Count: int64(count),
 	}, nil
 }
+
+func (s *FileServer) CreateFileWithStream(stream FileService_CreateFileWithStreamServer) error {
+	req, err := stream.Recv()
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	name := req.GetInfo().Name
+	if err := os.MkdirAll(path.Join(s.rootDir, path.Dir(name)), os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	p := path.Join(s.rootDir, name)
+	file, err := os.Create(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fileSize := 0
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			log.Print("no more data")
+			break
+		}
+		if err != nil {
+			slog.Error(err.Error())
+			return err
+		}
+		chunk := req.GetChunkData()
+		n, err := file.Write(chunk)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fileSize += n
+	}
+	res := &CreateFileWithStreamResponse{
+		BytesWritten: int64(fileSize),
+	}
+	err = stream.SendAndClose(res)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	return nil
+}

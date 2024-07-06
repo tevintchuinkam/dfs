@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -233,4 +234,67 @@ func newMDSClient(port int) metadata.MetadataServiceClient {
 		log.Fatalf("could not connect. err: %v", err)
 	}
 	return metadata.NewMetadataServiceClient(conn)
+}
+
+func (c *Client) CreateFileWithStream(data []byte, name string) (int, error) {
+	mds := newMDSClient(c.mdsPort)
+	rec, err := mds.RegisterFileCreation(context.Background(), &metadata.RecRequest{
+		Name:     name,
+		FileSize: int64(len(data)),
+	})
+	if err != nil {
+		slog.Error("getting storage location recommendation failed", "err", err.Error())
+		return 0, err
+	}
+
+	fs := helpers.NewFileServiceClient(rec.Port)
+	stream, err := fs.CreateFileWithStream(context.Background())
+	if err != nil {
+		slog.Error(err.Error())
+		return 0, err
+	}
+	err = stream.Send(&files.CreateFileWithStreamRequest{
+		Data: &files.CreateFileWithStreamRequest_Info{
+			Info: &files.FileInfo{
+				Name: name,
+			},
+		},
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return 0, err
+	}
+
+	reader := bytes.NewReader(data)
+	buf := make([]byte, 1024)
+
+	for {
+		n, err := reader.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			slog.Error(err.Error())
+			return 0, err
+		}
+		err = stream.Send(
+			&files.CreateFileWithStreamRequest{
+				Data: &files.CreateFileWithStreamRequest_ChunkData{
+					ChunkData: buf[:n],
+				},
+			},
+		)
+		if err != nil {
+			slog.Error(err.Error())
+			return 0, err
+		}
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatal("cannot receive response: ", err)
+	}
+
+	log.Printf("file uploaded with size: %d", res.GetBytesWritten())
+	return int(res.BytesWritten), nil
 }
