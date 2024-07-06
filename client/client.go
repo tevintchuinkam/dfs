@@ -214,8 +214,33 @@ func (c *Client) GetFileFromPort(port int32, name string) ([]byte, error) {
 	return fr.Data, nil
 }
 
-func (c *Client) GrepOnFileServer(fileName string, word string, port int32) (int, error) {
+func (c *Client) GetFileFromPortWithStream(port int32, name string) ([]byte, error) {
+	fs := helpers.NewFileServiceClient(port)
+	stream, err := fs.GetFileWithStream(context.Background(), &files.GetFileWithStreamRequest{
+		Name: name,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, err
+	}
 
+	var data []byte
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			slog.Error("failed to receive chunk", "err", err.Error())
+			return nil, err
+		}
+
+		data = append(data, res.GetChunkData()...)
+	}
+	return data, nil
+}
+
+func (c *Client) GrepOnFileServer(fileName string, word string, port int32) (int, error) {
 	fs := helpers.NewFileServiceClient(port)
 	r, err := fs.Grep(context.Background(), &files.GrepRequest{
 		FileName: fileName,
@@ -308,28 +333,10 @@ func (c *Client) GetFileWithStream(name string) ([]byte, error) {
 		slog.Error(err.Error())
 		return nil, err
 	}
-
-	fs := helpers.NewFileServiceClient(loc.Port)
-	stream, err := fs.GetFileWithStream(context.Background(), &files.GetFileWithStreamRequest{
-		Name: name,
-	})
+	data, err := c.GetFileFromPort(loc.Port, name)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err
-	}
-
-	var data []byte
-	for {
-		res, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			slog.Error("failed to receive chunk", "err", err.Error())
-			return nil, err
-		}
-
-		data = append(data, res.GetChunkData()...)
 	}
 
 	slog.Info("file downloaded", "size", len(data))

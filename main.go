@@ -167,7 +167,7 @@ func gatherGrepOptimizationData(iterations int) {
 						if !dataProximity {
 							f = func(file *metadata.FileInfo) {
 								// fetch the file from the chunk server
-								bytes, err := c.GetFileFromPort(file.Port, file.FullPath)
+								bytes, err := c.GetFileFromPortWithStream(file.Port, file.FullPath)
 								if err != nil {
 									log.Fatal(err)
 								}
