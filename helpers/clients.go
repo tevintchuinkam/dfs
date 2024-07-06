@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tevintchuinkam/tdfs/files"
+	"github.com/tevintchuinkam/dfs/files"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

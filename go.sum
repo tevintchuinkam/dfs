@@ -1,7 +1,7 @@
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/tevintchuinkam/tdfs v0.0.0-20240706103911-ece53df10063 h1:jPnCbhFc/BMx5/SqvHFRJ2xyTi/Q1Vhfm7U0rFHTj/0=
-github.com/tevintchuinkam/tdfs v0.0.0-20240706103911-ece53df10063/go.mod h1:OSfCEoi7FOhhzuRn50+lD0mtJu4J1jDgje9uhnHUb/k=
+github.com/tevintchuinkam/dfs v0.0.0-20240706103911-ece53df10063 h1:jPnCbhFc/BMx5/SqvHFRJ2xyTi/Q1Vhfm7U0rFHTj/0=
+github.com/tevintchuinkam/dfs v0.0.0-20240706103911-ece53df10063/go.mod h1:OSfCEoi7FOhhzuRn50+lD0mtJu4J1jDgje9uhnHUb/k=
 golang.org/x/net v0.25.0 h1:d/OCCoBEUq33pjydKrGQhw7IlUPI2Oylr+8qLx49kac=
 golang.org/x/net v0.25.0/go.mod h1:JkAGAh7GEvH74S6FOH42FLoXpXbE/aqXSrIQjXgsiwM=
 golang.org/x/sys v0.20.0 h1:Od9JTbYCk261bKm4M/mw7AklTlFYIa0bIp9BgSm1S8Y=

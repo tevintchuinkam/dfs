@@ -1,6 +1,6 @@
 package client
 
-import "github.com/tevintchuinkam/tdfs/metadata"
+import "github.com/tevintchuinkam/dfs/metadata"
 
 type dirContents struct {
 	// is this the entire directory or just parts of it ?

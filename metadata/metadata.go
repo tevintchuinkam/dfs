@@ -14,8 +14,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/tevintchuinkam/tdfs/files"
-	"github.com/tevintchuinkam/tdfs/helpers"
+	"github.com/tevintchuinkam/dfs/files"
+	"github.com/tevintchuinkam/dfs/helpers"
 	"google.golang.org/grpc"
 )
 

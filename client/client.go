@@ -8,9 +8,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/tevintchuinkam/tdfs/files"
-	"github.com/tevintchuinkam/tdfs/helpers"
-	"github.com/tevintchuinkam/tdfs/metadata"
+	"github.com/tevintchuinkam/dfs/files"
+	"github.com/tevintchuinkam/dfs/helpers"
+	"github.com/tevintchuinkam/dfs/metadata"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -16,14 +16,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tevintchuinkam/tdfs/client"
-	"github.com/tevintchuinkam/tdfs/files"
-	"github.com/tevintchuinkam/tdfs/grep"
-	"github.com/tevintchuinkam/tdfs/metadata"
+	"github.com/tevintchuinkam/dfs/client"
+	"github.com/tevintchuinkam/dfs/files"
+	"github.com/tevintchuinkam/dfs/grep"
+	"github.com/tevintchuinkam/dfs/metadata"
 )
 
 var (
-	MDS_PORT          = 48230
+	MDS_PORT          = 47230
 	CLIENT_PORT       = MDS_PORT - 1
 	NUM_CHUNK_SERVERS = 8
 )
@@ -56,13 +56,16 @@ func startAllServers() {
 	}
 }
 
-func stopAllServer() {
+func stopAllServers() {
 	// create the metadata server
-	mds.DeleteAllData(context.Background(), &metadata.DeleteAllDataRequest{})
-	mds.Stop()
+	if mds != nil {
+		mds.DeleteAllData(context.Background(), &metadata.DeleteAllDataRequest{})
+		mds.Stop()
+	}
 	for _, s := range fileServers {
 		s.Stop()
 	}
+
 }
 
 func main() {
@@ -90,15 +93,15 @@ func main() {
 
 	// Execute the functions based on the flags
 	if runStealing {
-		fmt.Printf("gather data for stealing optimization with a redundancy  of %d iterations...", *iterations)
+		fmt.Printf("gather data for stealing optimization with a redundancy  of %d iterations...\n", *iterations)
 		gatherWorkStealingOptimisationData(*iterations)
 	}
 	if runFlat {
-		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...", *iterations)
+		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...\n", *iterations)
 		gatherFlatOptimisationData(*iterations)
 	}
 	if runGrep {
-		fmt.Printf("gather data_proximity for flat optimization with a redundancy  of %d iterations...", *iterations)
+		fmt.Printf("gather data_proximity for flat optimization with a redundancy  of %d iterations...\n", *iterations)
 		gatherGrepOptimizationData(*iterations)
 	}
 
@@ -145,7 +148,6 @@ func gatherGrepOptimizationData(iterations int) {
 	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
-	c.DeleteAllData()
 
 	// Open the CSV file
 	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeKB", "UseCache", "DataProximity"})
@@ -159,7 +161,8 @@ func gatherGrepOptimizationData(iterations int) {
 	// do a file traversal (with and without metadata prefetching)
 	for _, useCache := range []bool{true, false} {
 		for fileSizeKb := 1; fileSizeKb < 5000; fileSizeKb += 500 {
-			c.DeleteAllData()
+			stopAllServers()
+			startAllServers()
 			createFilesAndDirs(c, ".", 1, generateData(fileSizeKb), 5, 2)
 			for _, dataProximity := range []bool{true, false} {
 				for i := range NUM_ITERATIONS {
@@ -233,7 +236,6 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
-	c.DeleteAllData()
 	// create files
 	data := generateData(1)
 
@@ -249,9 +251,12 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	// do a file traversal (with and without metadata prefetching)
 	useCache := false
 	for foldersPerLevel := range 8 {
-		c.DeleteAllData()
+		stopAllServers()
+		startAllServers()
 		createFilesAndDirs(c, ".", 1, data, 1, foldersPerLevel)
 		for i := range NUM_ITERATIONS {
+			stopAllServers()
+			startAllServers()
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
 					traverse: traverseDirectorySimple,
@@ -391,7 +396,8 @@ func gatherFlatOptimisationData(iterations int) {
 	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
-	c.DeleteAllData()
+	stopAllServers()
+	startAllServers()
 	// create files
 	data := generateData(1)
 	for dirNum := range NUM_FOLDERS {
@@ -432,6 +438,8 @@ func gatherFlatOptimisationData(iterations int) {
 	for _, useCache := range []bool{true, false} {
 		for iteration := range NUM_ITERATIONS {
 			// wait until cache is empty
+			stopAllServers()
+			startAllServers()
 			c.ClearCache()
 			if err := computeReadDirTime(c, ".", useCache, writer, iteration); err != nil {
 				log.Fatal(err)

@@ -11,7 +11,7 @@ import (
 	"path"
 	sync "sync"
 
-	"github.com/tevintchuinkam/tdfs/grep"
+	"github.com/tevintchuinkam/dfs/grep"
 
 	grpc "google.golang.org/grpc"
 )

@@ -3,7 +3,7 @@ module github.com/tevintchuinkam/dfs
 go 1.22.4
 
 require (
-	github.com/tevintchuinkam/tdfs v0.0.0-20240706103911-ece53df10063
+	github.com/tevintchuinkam/dfs v0.0.0-20240706103911-ece53df10063
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 )
