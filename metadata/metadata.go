@@ -44,6 +44,9 @@ type MetaDataServer struct {
 	rootDir     *fileInfo
 	// map from file to file server address
 	fileLocation map[string]*fileServer
+	grpcServer   *grpc.Server
+	listener     net.Listener
+	mu           sync.Mutex
 }
 
 func New(port int) *MetaDataServer {
@@ -60,25 +63,51 @@ func New(port int) *MetaDataServer {
 	}
 }
 
+// Start starts the MetaDataServer.
 func (s *MetaDataServer) Start() {
-	// accept connections
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen on port %s: %v", addr, err)
 	}
+	s.listener = lis
+
 	grpcServer := grpc.NewServer()
+	s.grpcServer = grpcServer
+
 	RegisterMetadataServiceServer(grpcServer, s)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatal(err)
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatal(err)
+		}
+	}()
+}
+
+// Stop gracefully stops the MetaDataServer.
+func (s *MetaDataServer) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
+		s.grpcServer = nil
+	}
+
+	if s.listener != nil {
+		s.listener.Close()
+		s.listener = nil
 	}
 }
 
 func (s *MetaDataServer) RegisterFileServer(port int) error {
-	c := helpers.NewFileServiceClient(int32(port))
+	f := helpers.NewFileServiceClient(int32(port))
 	// ping the server
 	challenge := rand.Int63()
-	resp, err := c.Ping(context.Background(), &files.PingRequest{Challenge: challenge})
+	resp, err := f.Ping(context.Background(), &files.PingRequest{Challenge: challenge})
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -88,7 +117,7 @@ func (s *MetaDataServer) RegisterFileServer(port int) error {
 	}
 	s.muFile.Lock()
 	srv := new(fileServer)
-	srv.client = &c
+	srv.client = &f
 	srv.port = port
 	s.fileServers = append(s.fileServers, srv)
 	s.muFile.Unlock()

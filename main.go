@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"flag"
@@ -27,11 +28,12 @@ var (
 	NUM_CHUNK_SERVERS = 8
 )
 
-func main() {
-	slog.SetLogLoggerLevel(slog.LevelError)
-	log.SetFlags(log.Lshortfile)
+var mds *metadata.MetaDataServer
+var fileServers []*files.FileServer
+
+func startAllServers() {
 	// create the metadata server
-	mds := metadata.New(MDS_PORT)
+	mds = metadata.New(MDS_PORT)
 	go mds.Start()
 	slog.Info("mds started", "port", MDS_PORT)
 
@@ -41,7 +43,9 @@ func main() {
 		fsPorts = append(fsPorts, MDS_PORT+i+1)
 	}
 	for _, port := range fsPorts {
-		go files.New(port).Start()
+		s := files.New(port)
+		fileServers = append(fileServers, s)
+		go s.Start()
 	}
 	time.Sleep(1 * time.Second)
 	for _, port := range fsPorts {
@@ -50,6 +54,20 @@ func main() {
 		}
 		slog.Info("registered chunk server", "port", port)
 	}
+}
+
+func stopAllServer() {
+	// create the metadata server
+	mds.DeleteAllData(context.Background(), &metadata.DeleteAllDataRequest{})
+	mds.Stop()
+	for _, s := range fileServers {
+		s.Stop()
+	}
+}
+
+func main() {
+	slog.SetLogLoggerLevel(slog.LevelError)
+	log.SetFlags(log.Lshortfile)
 	/*
 		f, err := os.Create("prof.prof")
 		if err != nil {

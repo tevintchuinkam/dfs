@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path"
+	sync "sync"
 
 	"github.com/tevintchuinkam/tdfs/grep"
 
@@ -31,8 +32,11 @@ func New(port int) *FileServer {
 
 type FileServer struct {
 	UnimplementedFileServiceServer
-	port    int
-	rootDir string
+	port       int
+	rootDir    string
+	grpcServer *grpc.Server
+	listener   net.Listener
+	mu         sync.Mutex
 }
 
 func (s *FileServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse, error) {
@@ -84,10 +88,28 @@ func (s *FileServer) Start() {
 	if err != nil {
 		log.Fatalf("failed to listen on port %s error=%v", addr, err)
 	}
+	s.listener = lis
 	grpcServer := grpc.NewServer()
+	s.grpcServer = grpcServer
 	RegisterFileServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// Stop gracefully stops the MetaDataServer.
+func (s *FileServer) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
+		s.grpcServer = nil
+	}
+
+	if s.listener != nil {
+		s.listener.Close()
+		s.listener = nil
 	}
 }
 
