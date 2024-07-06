@@ -90,7 +90,7 @@ func main() {
 func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
 	const (
 		CLIENT_PREFETCH_THRESHOLD = 8
-		LEVELS                    = 3  // depth of the folders
+		LEVELS                    = 2  // depth of the folders
 		FILES_PER_LEVEL           = 20 // number of files in each folder
 		FOLDER_PER_LEVEL          = 4
 	)
