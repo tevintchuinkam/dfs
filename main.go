@@ -87,13 +87,14 @@ func main() {
 	// do a grep (with and without smart data proximity)
 }
 
-func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
+func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int) {
 	const (
 		CLIENT_PREFETCH_THRESHOLD = 8
-		LEVELS                    = 2  // depth of the folders
-		FILES_PER_LEVEL           = 20 // number of files in each folder
-		FOLDER_PER_LEVEL          = 4
+		LEVELS                    = 2 // depth of the folders
 	)
+
+	var FOLDER_PER_LEVEL = foldersPerLevel
+	var FILES_PER_FOLDER = filesPerFolder // number of files in each folder
 	if level > LEVELS {
 		return
 	}
@@ -105,7 +106,7 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
 		}
 
 		// Create files in the current directory
-		for j := 0; j < FILES_PER_LEVEL; j++ {
+		for j := 0; j < FILES_PER_FOLDER; j++ {
 			filename := fmt.Sprintf("%s/file-%d.txt", subDir, j+1)
 			r, err := c.CreateFile(filename, data)
 			if err != nil {
@@ -117,7 +118,7 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
 		}
 
 		// Recursive call to create subdirectories and files
-		createFilesAndDirs(c, subDir, level+1, data)
+		createFilesAndDirs(c, subDir, level+1, data, filesPerFolder, foldersPerLevel)
 	}
 }
 
@@ -141,7 +142,7 @@ func gatherGrepOptimizationData(iterations int) {
 	for _, useCache := range []bool{true, false} {
 		for fileSizeKb := 1; fileSizeKb < 5000; fileSizeKb += 500 {
 			c.DeleteAllData()
-			createFilesAndDirs(c, ".", 1, generateData(fileSizeKb))
+			createFilesAndDirs(c, ".", 1, generateData(fileSizeKb), 5, 2)
 			for _, dataProximity := range []bool{true, false} {
 				for i := range NUM_ITERATIONS {
 					for _, algo := range [](TraversalAlgo){
@@ -231,7 +232,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	useCache := false
 	for foldersPerLevel := range 8 {
 		c.DeleteAllData()
-		createFilesAndDirs(c, ".", 1, data)
+		createFilesAndDirs(c, ".", 1, data, 1, foldersPerLevel)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
