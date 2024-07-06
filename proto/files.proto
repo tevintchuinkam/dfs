@@ -51,10 +51,19 @@ message CreateFileWithStreamResponse {
     int64 bytesWritten = 1;
 }
 
+message GetFileWithStreamRequest {
+    string name = 1;
+}
+
+message GetFileWithStreamResponse {
+    bytes chunkData = 1;
+}
+
 service FileService {
     rpc Ping(PingRequest) returns (PingResponse);
     rpc GetFile(GetFileRequest) returns (File);
     rpc CreateFile(CreateFileRequest) returns(CreateFileResponse);
     rpc Grep(GrepRequest) returns (GrepResponse);
     rpc CreateFileWithStream(stream CreateFileWithStreamRequest) returns (CreateFileWithStreamResponse);
+    rpc GetFileWithStream(GetFileWithStreamRequest) returns (stream GetFileWithStreamResponse);
 }

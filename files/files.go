@@ -150,7 +150,6 @@ func (s *FileServer) CreateFileWithStream(stream FileService_CreateFileWithStrea
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			log.Print("no more data")
 			break
 		}
 		if err != nil {
@@ -172,5 +171,44 @@ func (s *FileServer) CreateFileWithStream(stream FileService_CreateFileWithStrea
 		slog.Error(err.Error())
 		return err
 	}
+	return nil
+}
+
+func (s *FileServer) GetFileWithStream(req *GetFileWithStreamRequest, stream FileService_GetFileWithStreamServer) error {
+	// Build the file path
+	filePath := path.Join(s.rootDir, req.GetName())
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		slog.Error("failed to open file", "err", err.Error())
+		return err
+	}
+	defer file.Close()
+
+	// Create a buffer to read chunks of the file
+	buf := make([]byte, 1024)
+
+	for {
+		// Read a chunk from the file
+		n, err := file.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			slog.Error("failed to read file", "err", err.Error())
+			return err
+		}
+
+		// Send the chunk to the client
+		err = stream.Send(&GetFileWithStreamResponse{
+			ChunkData: buf[:n],
+		})
+		if err != nil {
+			slog.Error("failed to send chunk", "err", err.Error())
+			return err
+		}
+	}
+
 	return nil
 }

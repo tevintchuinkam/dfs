@@ -27,6 +27,7 @@ type FileServiceClient interface {
 	CreateFile(ctx context.Context, in *CreateFileRequest, opts ...grpc.CallOption) (*CreateFileResponse, error)
 	Grep(ctx context.Context, in *GrepRequest, opts ...grpc.CallOption) (*GrepResponse, error)
 	CreateFileWithStream(ctx context.Context, opts ...grpc.CallOption) (FileService_CreateFileWithStreamClient, error)
+	GetFileWithStream(ctx context.Context, in *GetFileWithStreamRequest, opts ...grpc.CallOption) (FileService_GetFileWithStreamClient, error)
 }
 
 type fileServiceClient struct {
@@ -107,6 +108,38 @@ func (x *fileServiceCreateFileWithStreamClient) CloseAndRecv() (*CreateFileWithS
 	return m, nil
 }
 
+func (c *fileServiceClient) GetFileWithStream(ctx context.Context, in *GetFileWithStreamRequest, opts ...grpc.CallOption) (FileService_GetFileWithStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &FileService_ServiceDesc.Streams[1], "/files.FileService/GetFileWithStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &fileServiceGetFileWithStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type FileService_GetFileWithStreamClient interface {
+	Recv() (*GetFileWithStreamResponse, error)
+	grpc.ClientStream
+}
+
+type fileServiceGetFileWithStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *fileServiceGetFileWithStreamClient) Recv() (*GetFileWithStreamResponse, error) {
+	m := new(GetFileWithStreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // FileServiceServer is the server API for FileService service.
 // All implementations must embed UnimplementedFileServiceServer
 // for forward compatibility
@@ -116,6 +149,7 @@ type FileServiceServer interface {
 	CreateFile(context.Context, *CreateFileRequest) (*CreateFileResponse, error)
 	Grep(context.Context, *GrepRequest) (*GrepResponse, error)
 	CreateFileWithStream(FileService_CreateFileWithStreamServer) error
+	GetFileWithStream(*GetFileWithStreamRequest, FileService_GetFileWithStreamServer) error
 	mustEmbedUnimplementedFileServiceServer()
 }
 
@@ -137,6 +171,9 @@ func (UnimplementedFileServiceServer) Grep(context.Context, *GrepRequest) (*Grep
 }
 func (UnimplementedFileServiceServer) CreateFileWithStream(FileService_CreateFileWithStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method CreateFileWithStream not implemented")
+}
+func (UnimplementedFileServiceServer) GetFileWithStream(*GetFileWithStreamRequest, FileService_GetFileWithStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetFileWithStream not implemented")
 }
 func (UnimplementedFileServiceServer) mustEmbedUnimplementedFileServiceServer() {}
 
@@ -249,6 +286,27 @@ func (x *fileServiceCreateFileWithStreamServer) Recv() (*CreateFileWithStreamReq
 	return m, nil
 }
 
+func _FileService_GetFileWithStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetFileWithStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(FileServiceServer).GetFileWithStream(m, &fileServiceGetFileWithStreamServer{stream})
+}
+
+type FileService_GetFileWithStreamServer interface {
+	Send(*GetFileWithStreamResponse) error
+	grpc.ServerStream
+}
+
+type fileServiceGetFileWithStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *fileServiceGetFileWithStreamServer) Send(m *GetFileWithStreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // FileService_ServiceDesc is the grpc.ServiceDesc for FileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +336,11 @@ var FileService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "CreateFileWithStream",
 			Handler:       _FileService_CreateFileWithStream_Handler,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetFileWithStream",
+			Handler:       _FileService_GetFileWithStream_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "files.proto",

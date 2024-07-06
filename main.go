@@ -116,7 +116,7 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, fi
 		// Create files in the current directory
 		for j := 0; j < FILES_PER_FOLDER; j++ {
 			filename := fmt.Sprintf("%s/file-%d.txt", subDir, j+1)
-			r, err := c.CreateFile(filename, data)
+			r, err := c.CreateFileWithStream(filename, data)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -396,7 +396,7 @@ func gatherFlatOptimisationData(iterations int) {
 				if err := c.MkDir(path.Dir(filename)); err != nil {
 					log.Fatal(err)
 				}
-				r, err := c.CreateFile(filename, data)
+				r, err := c.CreateFileWithStream(filename, data)
 				if err != nil {
 					log.Fatal(err)
 				}

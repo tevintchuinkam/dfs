@@ -236,7 +236,7 @@ func newMDSClient(port int) metadata.MetadataServiceClient {
 	return metadata.NewMetadataServiceClient(conn)
 }
 
-func (c *Client) CreateFileWithStream(data []byte, name string) (int, error) {
+func (c *Client) CreateFileWithStream(name string, data []byte) (int, error) {
 	mds := newMDSClient(c.mdsPort)
 	rec, err := mds.RegisterFileCreation(context.Background(), &metadata.RecRequest{
 		Name:     name,
@@ -295,6 +295,43 @@ func (c *Client) CreateFileWithStream(data []byte, name string) (int, error) {
 		log.Fatal("cannot receive response: ", err)
 	}
 
-	log.Printf("file uploaded with size: %d", res.GetBytesWritten())
+	slog.Info("file uploaded", "size", res.GetBytesWritten())
 	return int(res.BytesWritten), nil
+}
+
+func (c *Client) GetFileWithStream(name string) ([]byte, error) {
+	mds := newMDSClient(c.mdsPort)
+	loc, err := mds.GetLocation(context.Background(), &metadata.LocRequest{
+		Name: name,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, err
+	}
+
+	fs := helpers.NewFileServiceClient(loc.Port)
+	stream, err := fs.GetFileWithStream(context.Background(), &files.GetFileWithStreamRequest{
+		Name: name,
+	})
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, err
+	}
+
+	var data []byte
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			slog.Error("failed to receive chunk", "err", err.Error())
+			return nil, err
+		}
+
+		data = append(data, res.GetChunkData()...)
+	}
+
+	slog.Info("file downloaded", "size", len(data))
+	return data, nil
 }
