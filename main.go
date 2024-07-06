@@ -24,7 +24,7 @@ import (
 const (
 	CLIENT_PORT       = 49999
 	MDS_PORT          = 50000
-	NUM_CHUNK_SERVERS = 1
+	NUM_CHUNK_SERVERS = 8
 )
 
 func main() {
