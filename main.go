@@ -63,12 +63,26 @@ func main() {
 	*/
 	// Parse command-line flags
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
+	functions := flag.String("functions", "all", "comma-separated list of functions to run: flat, stealing, grep")
+
 	flag.Parse()
-	fmt.Printf("gather data with a redundancy  of %d iterations...", *iterations)
-	time.Sleep(5 * time.Second)
-	gatherFlatOptimisationData(*iterations)
-	gatherWorkStealingOptimisationData(*iterations)
-	gatherGrepOptimizationData(*iterations)
+	runFlat := strings.Contains(*functions, "flat") || *functions == "all"
+	runStealing := strings.Contains(*functions, "stealing") || *functions == "all"
+	runGrep := strings.Contains(*functions, "data_proximity") || *functions == "all"
+
+	// Execute the functions based on the flags
+	if runStealing {
+		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...", *iterations)
+		gatherWorkStealingOptimisationData(*iterations)
+	}
+	if runFlat {
+		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...", *iterations)
+		gatherFlatOptimisationData(*iterations)
+	}
+	if runGrep {
+		fmt.Printf("gather data_proximity for flat optimization with a redundancy  of %d iterations...", *iterations)
+		gatherGrepOptimizationData(*iterations)
+	}
 
 	// do a grep (with and without smart data proximity)
 }
