@@ -61,7 +61,7 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	*/
-	// Parse command-line flags
+	// Parse command-line flags for example  -iterations=1 -functions=flat
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
 	functions := flag.String("functions", "all", "comma-separated list of functions to run: flat, stealing, grep")
 
@@ -72,7 +72,7 @@ func main() {
 
 	// Execute the functions based on the flags
 	if runStealing {
-		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...", *iterations)
+		fmt.Printf("gather data for stealing optimization with a redundancy  of %d iterations...", *iterations)
 		gatherWorkStealingOptimisationData(*iterations)
 	}
 	if runFlat {
