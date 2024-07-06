@@ -137,7 +137,7 @@ func gatherGrepOptimizationData(iterations int) {
 	c.ClearCache()
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeKB", "UseCache", "DataProximity"})
+	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "UseCache", "DataProximity"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -147,7 +147,7 @@ func gatherGrepOptimizationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	for _, useCache := range []bool{true, false} {
-		for fileSizeKb := 1; fileSizeKb < 40000; fileSizeKb += 5000 {
+		for fileSizeMB := 1; fileSizeMB < 40000; fileSizeMB += 5000 {
 			for _, dataProximity := range []bool{true, false} {
 				for i := range NUM_ITERATIONS {
 					for _, algo := range [](TraversalAlgo){
@@ -158,7 +158,7 @@ func gatherGrepOptimizationData(iterations int) {
 					} {
 						stopAllServers()
 						startAllServers()
-						createFilesAndDirs(c, ".", 1, generateData(fileSizeKb), 2, 2)
+						createFilesAndDirs(c, ".", 1, generateData(fileSizeMB), 2, 2)
 						c.ClearCache()
 						totalCount := new(int) // total count of the searched word
 						mu := new(sync.Mutex)
@@ -199,10 +199,9 @@ func gatherGrepOptimizationData(iterations int) {
 						took := time.Since(start)
 						if err := writer.Write(
 							[]string{
-								algo.name,
 								fmt.Sprint(i),
 								took.String(),
-								fmt.Sprint(fileSizeKb),
+								fmt.Sprint(fileSizeMB),
 								fmt.Sprint(useCache),
 								fmt.Sprint(dataProximity),
 							},
@@ -236,7 +235,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	useCache := false
-	for foldersPerLevel := range 8 {
+	for foldersPerLevel := range 20 {
 		stopAllServers()
 		startAllServers()
 		createFilesAndDirs(c, ".", 1, data, 1, foldersPerLevel)
@@ -278,20 +277,14 @@ func gatherWorkStealingOptimisationData(iterations int) {
 
 func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bool, f func(*metadata.FileInfo)) error {
 	var wgWork sync.WaitGroup
-	work := make(chan string, 100)
+	work := make(chan string, 200)
 	defer close(work)
-	// work <- workRes{[]string{dirPath}}
 	work <- dirPath
 	wgWork.Add(1)
-	done := make(map[int]bool)
-	var muDone sync.Mutex
 
 	// Number of workers
 	numWorkers := 8
 	for i := range numWorkers {
-		muDone.Lock()
-		done[i] = false
-		muDone.Unlock()
 		go func(id int) {
 			for w := range work {
 				// Open the directory
@@ -506,7 +499,7 @@ func openCSVFile(filePath string, headers []string) (*os.File, *csv.Writer) {
 	return csvFile, writer
 }
 
-func generateData(kb int) []byte {
+func generateData(mb int) []byte {
 	// Define the base data
 	baseData := []byte(`
 		The Road Not Taken
@@ -539,7 +532,7 @@ func generateData(kb int) []byte {
 	`)
 
 	// Calculate the total number of bytes needed
-	totalBytes := kb * 1024
+	totalBytes := mb * 1024 * 1024
 
 	// Create a buffer to hold the result
 	data := make([]byte, 0, totalBytes)
