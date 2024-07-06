@@ -60,8 +60,8 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	*/
-	// flatOptimisation(c)
-	// gatherWorkStealingOptimisationData()
+	gatherFlatOptimisationData()
+	gatherWorkStealingOptimisationData()
 	gatherGrepOptimizationData()
 
 	// do a grep (with and without smart data proximity)
@@ -105,7 +105,8 @@ func gatherGrepOptimizationData() {
 	const CLIENT_PREFETCH_THRESHOLD = 8
 	const NUM_ITERATIONS = 5
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
-	// create files
+	c.ClearCache()
+	c.DeleteAllData()
 
 	// Open the CSV file
 	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeKB", "UseCache", "DataProximity"})
@@ -130,7 +131,6 @@ func gatherGrepOptimizationData() {
 						},
 					} {
 						c.ClearCache()
-						start := time.Now()
 						totalCount := new(int) // total count of the searched word
 						mu := new(sync.Mutex)
 						word := "And"
@@ -162,6 +162,8 @@ func gatherGrepOptimizationData() {
 								mu.Unlock()
 							}
 						}
+
+						start := time.Now()
 						if err := algo.traverse(c, ".", useCache, f); err != nil {
 							log.Fatal(err)
 						}
@@ -191,6 +193,8 @@ func gatherWorkStealingOptimisationData() {
 	const CLIENT_PREFETCH_THRESHOLD = 8
 	const NUM_ITERATIONS = 10
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
+	c.ClearCache()
+	c.DeleteAllData()
 	// create files
 	data := generateData(1)
 
@@ -347,6 +351,8 @@ func gatherFlatOptimisationData() {
 	const NUM_FILE = 30
 	const NUM_ITERATIONS = 30
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
+	c.ClearCache()
+	c.DeleteAllData()
 	// create files
 	data := generateData(1)
 	for dirNum := range NUM_FOLDERS {
