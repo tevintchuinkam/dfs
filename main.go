@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -21,8 +22,8 @@ import (
 )
 
 const (
-	CLIENT_PORT       = 4999
-	MDS_PORT          = 5000
+	CLIENT_PORT       = 49999
+	MDS_PORT          = 50000
 	NUM_CHUNK_SERVERS = 1
 )
 
@@ -60,9 +61,14 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	*/
-	gatherFlatOptimisationData()
-	gatherWorkStealingOptimisationData()
-	gatherGrepOptimizationData()
+	// Parse command-line flags
+	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
+	flag.Parse()
+	fmt.Printf("gather data with a redundancy  of %d iterations...", *iterations)
+	time.Sleep(5 * time.Second)
+	gatherFlatOptimisationData(*iterations)
+	gatherWorkStealingOptimisationData(*iterations)
+	gatherGrepOptimizationData(*iterations)
 
 	// do a grep (with and without smart data proximity)
 }
@@ -101,9 +107,9 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte) {
 	}
 }
 
-func gatherGrepOptimizationData() {
+func gatherGrepOptimizationData(iterations int) {
 	const CLIENT_PREFETCH_THRESHOLD = 8
-	const NUM_ITERATIONS = 5
+	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
 	c.DeleteAllData()
@@ -189,9 +195,9 @@ func gatherGrepOptimizationData() {
 	}
 }
 
-func gatherWorkStealingOptimisationData() {
+func gatherWorkStealingOptimisationData(iterations int) {
 	const CLIENT_PREFETCH_THRESHOLD = 8
-	const NUM_ITERATIONS = 10
+	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
 	c.DeleteAllData()
@@ -345,11 +351,11 @@ func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool, f 
 	}
 }
 
-func gatherFlatOptimisationData() {
+func gatherFlatOptimisationData(iterations int) {
 	const CLIENT_PREFETCH_THRESHOLD = 8
 	const NUM_FOLDERS = 2
 	const NUM_FILE = 30
-	const NUM_ITERATIONS = 30
+	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
 	c.DeleteAllData()
