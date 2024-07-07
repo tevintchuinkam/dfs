@@ -139,7 +139,7 @@ func gatherGrepOptimizationData(iterations int) {
 	defer csvFile.Close()
 
 	useCache := false
-	fileSizeMB := 50
+	fileSizeMB := 10
 	for _, dataProximity := range []bool{true, false} {
 		for filesPerFolder := range 16 {
 			for i := range NUM_ITERATIONS {
