@@ -65,7 +65,6 @@ func stopAllServers() {
 	for _, s := range fileServers {
 		s.Stop()
 	}
-
 }
 
 func main() {
@@ -245,7 +244,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 				c.ClearCache()
 
 				start := time.Now()
-				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, _ *sync.WaitGroup) { fmt.Println(file.FullPath) }); err != nil {
+				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, wg *sync.WaitGroup) { defer wg.Done(); fmt.Println(file.FullPath) }); err != nil {
 					log.Fatal(err)
 				}
 				took := time.Since(start)
@@ -356,7 +355,9 @@ func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool, f 
 			}
 		} else {
 			// Write the file info to the CSV file
-			f(entry, new(sync.WaitGroup))
+			wg := new(sync.WaitGroup)
+			wg.Add(1)
+			f(entry, wg)
 		}
 		index++
 	}
