@@ -240,7 +240,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 
 	useCache := false
 	foldersPerLevel := 5
-	for latency := range 50 {
+	for latency := 0; latency < 30; latency += 2 {
 		slog.Info("restarting servers", "latency", latency)
 		stopAllServers()
 		startAllServers(time.Duration(latency) * time.Microsecond)
