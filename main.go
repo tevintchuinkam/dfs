@@ -237,9 +237,10 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	}
 
 	useCache := false
-	stopAllServers()
-	startAllServers(time.Duration(0))
+
 	for foldersPerLevel := range 10 {
+		stopAllServers()
+		startAllServers(time.Duration(0))
 		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel+1, 2)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){
