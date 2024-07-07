@@ -228,7 +228,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	useCache := false
-	for foldersPerLevel := range 20 {
+	for foldersPerLevel := range 10 {
 		for i := range NUM_ITERATIONS {
 			stopAllServers()
 			startAllServers(20 * time.Millisecond)
