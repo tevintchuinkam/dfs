@@ -227,6 +227,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	useCache := false
 	foldersPerLevel := 5
 	for latency := range 8 {
+		slog.Info("restarting servers", "latency", latency)
 		stopAllServers()
 		startAllServers(time.Duration(latency) * time.Millisecond)
 		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
@@ -245,7 +246,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 				c.ClearCache()
 
 				start := time.Now()
-				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, _ *sync.WaitGroup) { fmt.Println(file.FullPath) }); err != nil {
+				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, wg *sync.WaitGroup) { defer wg.Done(); fmt.Println(file.FullPath) }); err != nil {
 					log.Fatal(err)
 				}
 				took := time.Since(start)
