@@ -14,8 +14,11 @@ def convert_time_to_seconds(time_str):
 
 df["Time Taken (s)"] = df["Time Taken"].apply(convert_time_to_seconds)
 
+# Compute the average time taken for each algorithm and folders per level
+df = df.groupby(['FileCount', 'DataProximity'])['Time Taken (s)'].mean().reset_index()
+
 # Plotting
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(12, 6))
 
 for proximity in df["DataProximity"].unique():
     subset = df[df["DataProximity"] == proximity]
@@ -23,7 +26,7 @@ for proximity in df["DataProximity"].unique():
 
 plt.xlabel('File Count')
 plt.ylabel('Time Taken (s)')
-plt.title('Time Taken vs FileSize with Data Proximity')
+plt.title('Time Taken vs File Count with Data Proximity')
 plt.legend()
 plt.grid(True)
 plt.savefig("../results/data_proximity.png")
