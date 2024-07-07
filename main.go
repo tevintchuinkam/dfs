@@ -68,12 +68,17 @@ func stopAllServers() {
 }
 
 func measureLatency() {
+	startAllServers(0)
+	defer stopAllServers()
 	mds := client.NewMDSClient(MDS_PORT)
-	n := 1000000
+	n := 10000
 	totalTime := 0 * time.Millisecond
 	for i := range n {
 		start := time.Now()
-		mds.Ping(context.Background(), &metadata.PingRequest{})
+		_, err := mds.Ping(context.Background(), &metadata.PingRequest{})
+		if err != nil {
+			log.Fatal(err)
+		}
 		totalTime += time.Since(start)
 		log.Printf("%d of %d\n", i, n)
 	}
@@ -84,6 +89,7 @@ func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
 	log.SetFlags(log.Lshortfile)
 	measureLatency()
+	time.Sleep(2 * time.Second)
 	// Parse command-line flags for example  -iterations=1 -functions=flat
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
 	functions := flag.String("functions", "all", "comma-separated list of functions to run: flat, stealing, grep")
@@ -228,7 +234,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	data := generateData(1)
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
+	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "AddedLatency"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -237,11 +243,11 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	}
 
 	useCache := false
-
-	for foldersPerLevel := range 10 {
+	foldersPerLevel := 5
+	for latency := 0; latency < 1501; latency += 150 {
 		stopAllServers()
 		startAllServers(time.Duration(0))
-		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel+1, 2)
+		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
@@ -266,7 +272,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 						algo.name,
 						fmt.Sprint(i),
 						took.String(),
-						fmt.Sprint(foldersPerLevel + 1),
+						fmt.Sprint(latency),
 					},
 				); err != nil {
 					log.Fatal(err)
