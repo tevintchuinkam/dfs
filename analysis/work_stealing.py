@@ -1,14 +1,23 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
+# Load the data
 data = pd.read_csv("../results/workstealing.csv")
 
 # Convert the data into a DataFrame
 df = pd.DataFrame(data)
 
-# Remove the 'ms' from the Time Taken and convert to float
-df['Time Taken'] = df['Time Taken'].str.replace('ms', '').astype(float)
+# Function to convert time strings to milliseconds
+def convert_to_ms(time_str):
+    if 'ms' in time_str:
+        return float(time_str.replace('ms', ''))
+    elif 's' in time_str:
+        return float(time_str.replace('s', '')) * 1000
+    else:
+        raise ValueError("Unexpected time format")
+
+# Apply the conversion function to the 'Time Taken' column
+df['Time Taken'] = df['Time Taken'].apply(convert_to_ms)
 
 # Compute the average time taken for each algorithm and folders per level
 avg_time = df.groupby(['Algo', 'FoldersPerLevel'])['Time Taken'].mean().reset_index()

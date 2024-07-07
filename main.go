@@ -218,7 +218,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	data := generateData(1)
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
+	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "LatencyMS"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -228,10 +228,11 @@ func gatherWorkStealingOptimisationData(iterations int) {
 
 	// do a file traversal (with and without metadata prefetching)
 	useCache := false
-	for foldersPerLevel := range 10 {
+	foldersPerLevel := 5
+	for latency := range 20 {
 		for i := range NUM_ITERATIONS {
 			stopAllServers()
-			startAllServers(20 * time.Millisecond)
+			startAllServers(time.Duration(latency) * time.Millisecond)
 			createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel)
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
@@ -256,7 +257,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 						algo.name,
 						fmt.Sprint(i),
 						took.String(),
-						fmt.Sprint(foldersPerLevel),
+						fmt.Sprint(latency),
 					},
 				); err != nil {
 					log.Fatal(err)
