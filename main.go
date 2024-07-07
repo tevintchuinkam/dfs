@@ -69,8 +69,7 @@ func stopAllServers() {
 }
 
 func main() {
-
-	slog.SetLogLoggerLevel(slog.LevelError)
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	log.SetFlags(log.Lshortfile)
 	// Parse command-line flags for example  -iterations=1 -functions=flat
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
@@ -246,7 +245,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 				c.ClearCache()
 
 				start := time.Now()
-				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, wg *sync.WaitGroup) { defer wg.Done(); fmt.Println(file.FullPath) }); err != nil {
+				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, _ *sync.WaitGroup) { fmt.Println(file.FullPath) }); err != nil {
 					log.Fatal(err)
 				}
 				took := time.Since(start)
