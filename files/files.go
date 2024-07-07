@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	sync "sync"
+	"time"
 
 	"github.com/tevintchuinkam/dfs/grep"
 
@@ -80,8 +81,34 @@ func (s *FileServer) GetFile(ctx context.Context, in *GetFileRequest) (*File, er
 	return res, nil
 }
 
+// UnaryInterceptor adds artificial latency to unary RPCs
+func UnaryInterceptor(latency time.Duration) grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
+		time.Sleep(latency)
+		return handler(ctx, req)
+	}
+}
+
+// StreamInterceptor adds artificial latency to streaming RPCs
+func StreamInterceptor(latency time.Duration) grpc.StreamServerInterceptor {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		time.Sleep(latency)
+		return handler(srv, ss)
+	}
+}
+
 // if all goes well, this function will not return
-func (s *FileServer) Start() {
+func (s *FileServer) Start(latency time.Duration) {
 	// accept connections
 	addr := fmt.Sprintf(":%d", s.port)
 	lis, err := net.Listen("tcp", addr)
@@ -89,7 +116,10 @@ func (s *FileServer) Start() {
 		log.Fatalf("failed to listen on port %s error=%v", addr, err)
 	}
 	s.listener = lis
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(UnaryInterceptor(latency)),
+		grpc.StreamInterceptor(StreamInterceptor(latency)),
+	)
 	s.grpcServer = grpcServer
 	RegisterFileServiceServer(grpcServer, s)
 	if err := grpcServer.Serve(lis); err != nil {

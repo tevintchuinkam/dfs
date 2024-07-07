@@ -63,8 +63,34 @@ func New(port int) *MetaDataServer {
 	}
 }
 
+// UnaryInterceptor adds artificial latency to unary RPCs
+func UnaryInterceptor(latency time.Duration) grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
+		time.Sleep(latency)
+		return handler(ctx, req)
+	}
+}
+
+// StreamInterceptor adds artificial latency to streaming RPCs
+func StreamInterceptor(latency time.Duration) grpc.StreamServerInterceptor {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		time.Sleep(latency)
+		return handler(srv, ss)
+	}
+}
+
 // Start starts the MetaDataServer.
-func (s *MetaDataServer) Start() {
+func (s *MetaDataServer) Start(latency time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -76,7 +102,10 @@ func (s *MetaDataServer) Start() {
 	}
 	s.listener = lis
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(UnaryInterceptor(latency)),
+		grpc.StreamInterceptor(StreamInterceptor(latency)),
+	)
 	s.grpcServer = grpcServer
 
 	RegisterMetadataServiceServer(grpcServer, s)

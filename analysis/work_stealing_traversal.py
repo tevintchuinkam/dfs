@@ -2,36 +2,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-data = pd.read_csv("../results/results_workstealing.csv")
+data = pd.read_csv("../results/workstealing.csv")
 
 # Convert the data into a DataFrame
 df = pd.DataFrame(data)
 
-# Convert time to a consistent format (seconds)
-def convert_to_seconds(time_str):
-    if 's' in time_str and 'ms' not in time_str:
-        return float(time_str.replace('s', ''))
-    elif 'ms' in time_str:
-        return float(time_str.replace('ms', '')) / 1000.0
+# Remove the 'ms' from the Time Taken and convert to float
+df['Time Taken'] = df['Time Taken'].str.replace('ms', '').astype(float)
 
-df['Time Taken (s)'] = df['Time Taken'].apply(convert_to_seconds)
+# Compute the average time taken for each algorithm and folders per level
+avg_time = df.groupby(['Algo', 'FoldersPerLevel'])['Time Taken'].mean().reset_index()
 
-# Calculate average time taken by each algorithm
-average_time = df.groupby('Algo')['Time Taken (s)'].mean().reset_index()
+# Plot the data
+plt.figure(figsize=(12, 6))
 
-# Print the average times
-print("Average Time Taken by Each Algorithm:")
-print(average_time)
+for algo in avg_time['Algo'].unique():
+    algo_data = avg_time[avg_time['Algo'] == algo]
+    plt.plot(algo_data['FoldersPerLevel'], algo_data['Time Taken'], marker='o', label=algo)
 
-# Plot the comparison
-plt.figure(figsize=(10, 6))
-for algo in df['Algo'].unique():
-    algo_data = df[df['Algo'] == algo]
-    plt.plot(algo_data['Iteration'], algo_data['Time Taken (s)'], marker='o', label=algo)
-
-plt.title('Performance Comparison of Algorithms')
-plt.xlabel('Iteration')
-plt.ylabel('Time Taken (seconds)')
+plt.xlabel('Folders Per Level')
+plt.ylabel('Average Time Taken (ms)')
+plt.title('Average Time Taken by Algorithm and Folders Per Level')
 plt.legend()
 plt.grid(True)
 plt.show()

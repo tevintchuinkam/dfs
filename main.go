@@ -31,10 +31,10 @@ var (
 var mds *metadata.MetaDataServer
 var fileServers []*files.FileServer
 
-func startAllServers() {
+func startAllServers(latency time.Duration) {
 	// create the metadata server
 	mds = metadata.New(MDS_PORT)
-	go mds.Start()
+	go mds.Start(latency)
 	slog.Info("mds started", "port", MDS_PORT)
 
 	// create a few files servers
@@ -45,7 +45,7 @@ func startAllServers() {
 	for _, port := range fsPorts {
 		s := files.New(port)
 		fileServers = append(fileServers, s)
-		go s.Start()
+		go s.Start(latency)
 	}
 	time.Sleep(1 * time.Second)
 	for _, port := range fsPorts {
@@ -69,6 +69,7 @@ func stopAllServers() {
 }
 
 func main() {
+
 	slog.SetLogLoggerLevel(slog.LevelError)
 	log.SetFlags(log.Lshortfile)
 	// Parse command-line flags for example  -iterations=1 -functions=flat
@@ -82,15 +83,15 @@ func main() {
 
 	// Execute the functions based on the flags
 	if runStealing {
-		fmt.Printf("gather data for stealing optimization with a redundancy  of %d iterations...\n", *iterations)
+		fmt.Printf("gather data for stealing optimization with a redundancy of %d iterations...\n", *iterations)
 		gatherWorkStealingOptimisationData(*iterations)
 	}
 	if runFlat {
-		fmt.Printf("gather data for flat optimization with a redundancy  of %d iterations...\n", *iterations)
+		fmt.Printf("gather data for flat optimization with a redundancy of %d iterations...\n", *iterations)
 		gatherFlatOptimisationData(*iterations)
 	}
 	if runGrep {
-		fmt.Printf("gather data_proximity for flat optimization with a redundancy  of %d iterations...\n", *iterations)
+		fmt.Printf("gather data for data_proximity optimization with a redundancy of %d iterations...\n", *iterations)
 		gatherGrepOptimizationData(*iterations)
 	}
 }
@@ -137,80 +138,72 @@ func gatherGrepOptimizationData(iterations int) {
 	c.ClearCache()
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/grep.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "UseCache", "DataProximity"})
+	csvFile, writer := openCSVFile("results/data_proximity.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "DataProximity"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
 		traverse func(*client.Client, string, bool, func(*metadata.FileInfo)) error
 		name     string
 	}
-
-	// do a file traversal (with and without metadata prefetching)
-	for _, useCache := range []bool{true, false} {
-		for fileSizeMB := 1; fileSizeMB < 100; fileSizeMB += 20 {
-			for _, dataProximity := range []bool{true, false} {
-				for i := range NUM_ITERATIONS {
-					for _, algo := range [](TraversalAlgo){
-						TraversalAlgo{
-							traverse: traverseDirectoryWorkStealing,
-							name:     "workstealing",
-						},
-					} {
-						stopAllServers()
-						startAllServers()
-						createFilesAndDirs(c, ".", 1, generateData(fileSizeMB), 2, 2)
-						c.ClearCache()
-						totalCount := new(int) // total count of the searched word
-						mu := new(sync.Mutex)
-						word := "And"
-						var f func(*metadata.FileInfo)
-						if !dataProximity {
-							f = func(file *metadata.FileInfo) {
-								// fetch the file from the chunk server
-								bytes, err := c.GetFileFromPortWithStream(file.Port, file.FullPath)
-								if err != nil {
-									log.Fatal(err)
-								}
-								total := grep.CountWordOccurrences(bytes, word)
-								fmt.Printf("found %s %d times in file %s of size %d\n", word, total, file.FullPath, file.Size)
-								mu.Lock()
-								*totalCount += total
-								mu.Unlock()
-
-							}
-						} else {
-							f = func(file *metadata.FileInfo) {
-								// compute the count on the fileserver and reduce on the client
-								count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
-								if err != nil {
-									log.Fatal(err)
-								}
-								fmt.Printf("found %s %d times in file %s of size %d\n", word, count, file.FullPath, file.Size)
-								mu.Lock()
-								*totalCount += count
-								mu.Unlock()
-							}
-						}
-
+	useCache := false
+	for fileSizeMB := 1; fileSizeMB < 101; fileSizeMB += 20 {
+		for _, dataProximity := range []bool{true, false} {
+			for i := range NUM_ITERATIONS {
+				stopAllServers()
+				startAllServers(0)
+				createFilesAndDirs(c, ".", 1, generateData(fileSizeMB), 2, 2)
+				c.ClearCache()
+				totalCount := new(int) // total count of the searched word
+				mu := new(sync.Mutex)
+				word := "And"
+				var f func(*metadata.FileInfo)
+				if !dataProximity {
+					f = func(file *metadata.FileInfo) {
+						// fetch the file from the chunk server
 						start := time.Now()
-						if err := algo.traverse(c, ".", useCache, f); err != nil {
+						bytes, err := c.GetFileFromPortWithStream(file.Port, file.FullPath)
+						if err != nil {
 							log.Fatal(err)
 						}
 						took := time.Since(start)
-						if err := writer.Write(
-							[]string{
-								fmt.Sprint(i),
-								took.String(),
-								fmt.Sprint(fileSizeMB),
-								fmt.Sprint(useCache),
-								fmt.Sprint(dataProximity),
-							},
-						); err != nil {
+						start = time.Now()
+						total := grep.CountWordOccurrences(bytes, word)
+						fmt.Printf("OFF found %s %d times in file %s of size %dMB fetching_took=%v counting_took%v\n", word, total, file.FullPath, fileSizeMB, took, time.Since(start))
+						mu.Lock()
+						*totalCount += total
+						mu.Unlock()
+					}
+				} else {
+					fmt.Println("using grep on file server func")
+					f = func(file *metadata.FileInfo) {
+						// compute the count on the fileserver and reduce on the client
+						start := time.Now()
+						count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
+						if err != nil {
 							log.Fatal(err)
 						}
-						writer.Flush()
+						fmt.Printf("ON found %s %d times in file %s of size %dMB took=%v\n", word, count, file.FullPath, fileSizeMB, time.Since(start))
+						mu.Lock()
+						*totalCount += count
+						mu.Unlock()
 					}
 				}
+				start := time.Now()
+				if err := traverseDirectoryWorkStealing(c, ".", useCache, f); err != nil {
+					log.Fatal(err)
+				}
+				took := time.Since(start)
+				if err := writer.Write(
+					[]string{
+						fmt.Sprint(i),
+						took.String(),
+						fmt.Sprint(fileSizeMB),
+						fmt.Sprint(dataProximity),
+					},
+				); err != nil {
+					log.Fatal(err)
+				}
+				writer.Flush()
 			}
 		}
 	}
@@ -236,12 +229,10 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	// do a file traversal (with and without metadata prefetching)
 	useCache := false
 	for foldersPerLevel := range 20 {
-		stopAllServers()
-		startAllServers()
-		createFilesAndDirs(c, ".", 1, data, 1, foldersPerLevel)
 		for i := range NUM_ITERATIONS {
 			stopAllServers()
-			startAllServers()
+			startAllServers(20 * time.Millisecond)
+			createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel)
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
 					traverse: traverseDirectorySimple,
@@ -254,6 +245,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 			} {
 				slog.Info("iteration", "count", i)
 				c.ClearCache()
+
 				start := time.Now()
 				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo) { fmt.Println(file.FullPath) }); err != nil {
 					log.Fatal(err)
@@ -281,6 +273,8 @@ func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bo
 	defer close(work)
 	work <- dirPath
 	wgWork.Add(1)
+
+	var wgFunc sync.WaitGroup
 
 	// Number of workers
 	numWorkers := 8
@@ -316,7 +310,11 @@ func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bo
 						wgWork.Add(1)
 						work <- nextPath
 					} else {
-						f(entry)
+						wgFunc.Add(1)
+						go func() {
+							defer wgFunc.Done()
+							f(entry)
+						}()
 					}
 					index++
 				}
@@ -327,6 +325,7 @@ func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bo
 	}
 	// Wait for all goroutines to finish
 	wgWork.Wait()
+	wgFunc.Wait()
 	return nil
 }
 
@@ -376,7 +375,7 @@ func gatherFlatOptimisationData(iterations int) {
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
 	c.ClearCache()
 	stopAllServers()
-	startAllServers()
+	startAllServers(0)
 	// create files
 	data := generateData(1)
 	createFiles := func() {
@@ -420,7 +419,7 @@ func gatherFlatOptimisationData(iterations int) {
 		for iteration := range NUM_ITERATIONS {
 			// wait until cache is empty
 			stopAllServers()
-			startAllServers()
+			startAllServers(0)
 			c.ClearCache()
 			createFiles()
 			if err := computeReadDirTime(c, ".", useCache, writer, iteration); err != nil {
