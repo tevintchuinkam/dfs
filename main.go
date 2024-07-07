@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	MDS_PORT          = 43230
+	MDS_PORT          = 42790
 	CLIENT_PORT       = MDS_PORT - 1
 	NUM_CHUNK_SERVERS = 8
 )
