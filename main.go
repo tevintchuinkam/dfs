@@ -96,12 +96,9 @@ func main() {
 	}
 }
 
-func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int) {
-	const (
-		CLIENT_PREFETCH_THRESHOLD = 8
-		LEVELS                    = 2
-	)
+func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int, levels int) {
 
+	var LEVELS = levels
 	var FOLDER_PER_LEVEL = foldersPerLevel
 	var FILES_PER_FOLDER = filesPerFolder
 	if level > LEVELS {
@@ -127,7 +124,7 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, fi
 		}
 
 		// Recursive call to create subdirectories and files
-		createFilesAndDirs(c, subDir, level+1, data, filesPerFolder, foldersPerLevel)
+		createFilesAndDirs(c, subDir, level+1, data, filesPerFolder, foldersPerLevel, levels)
 	}
 }
 
@@ -138,27 +135,25 @@ func gatherGrepOptimizationData(iterations int) {
 	c.ClearCache()
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/data_proximity.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "DataProximity"})
+	csvFile, writer := openCSVFile("results/data_proximity.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "DataProximity", "Files"})
 	defer csvFile.Close()
 
-	type TraversalAlgo struct {
-		traverse func(*client.Client, string, bool, func(*metadata.FileInfo)) error
-		name     string
-	}
 	useCache := false
-	for fileSizeMB := 1; fileSizeMB < 101; fileSizeMB += 20 {
-		for _, dataProximity := range []bool{true, false} {
+	fileSizeMB := 50
+	for _, dataProximity := range []bool{true, false} {
+		for filesPerFolder := range 16 {
 			for i := range NUM_ITERATIONS {
 				stopAllServers()
 				startAllServers(0)
-				createFilesAndDirs(c, ".", 1, generateData(fileSizeMB), 2, 2)
+				createFilesAndDirs(c, ".", 1, generateData(fileSizeMB), filesPerFolder+1, 1, 1)
 				c.ClearCache()
 				totalCount := new(int) // total count of the searched word
 				mu := new(sync.Mutex)
 				word := "And"
-				var f func(*metadata.FileInfo)
+				var f func(*metadata.FileInfo, *sync.WaitGroup)
 				if !dataProximity {
-					f = func(file *metadata.FileInfo) {
+					f = func(file *metadata.FileInfo, wg *sync.WaitGroup) {
+						defer wg.Done()
 						// fetch the file from the chunk server
 						start := time.Now()
 						bytes, err := c.GetFileFromPortWithStream(file.Port, file.FullPath)
@@ -175,17 +170,20 @@ func gatherGrepOptimizationData(iterations int) {
 					}
 				} else {
 					fmt.Println("using grep on file server func")
-					f = func(file *metadata.FileInfo) {
-						// compute the count on the fileserver and reduce on the client
-						start := time.Now()
-						count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
-						if err != nil {
-							log.Fatal(err)
-						}
-						fmt.Printf("ON found %s %d times in file %s of size %dMB took=%v\n", word, count, file.FullPath, fileSizeMB, time.Since(start))
-						mu.Lock()
-						*totalCount += count
-						mu.Unlock()
+					f = func(file *metadata.FileInfo, wg *sync.WaitGroup) {
+						defer wg.Done()
+						go func() {
+							// compute the count on the fileserver and reduce on the client
+							start := time.Now()
+							count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
+							if err != nil {
+								log.Fatal(err)
+							}
+							fmt.Printf("ON found %s %d times in file %s of size %dMB took=%v\n", word, count, file.FullPath, fileSizeMB, time.Since(start))
+							mu.Lock()
+							*totalCount += count
+							mu.Unlock()
+						}()
 					}
 				}
 				start := time.Now()
@@ -222,7 +220,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
-		traverse func(*client.Client, string, bool, func(*metadata.FileInfo)) error
+		traverse func(*client.Client, string, bool, func(*metadata.FileInfo, *sync.WaitGroup)) error
 		name     string
 	}
 
@@ -233,7 +231,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 		for i := range NUM_ITERATIONS {
 			stopAllServers()
 			startAllServers(time.Duration(latency) * time.Millisecond)
-			createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel)
+			createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
 					traverse: traverseDirectorySimple,
@@ -248,7 +246,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 				c.ClearCache()
 
 				start := time.Now()
-				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo) { fmt.Println(file.FullPath) }); err != nil {
+				if err := algo.traverse(c, ".", useCache, func(file *metadata.FileInfo, _ *sync.WaitGroup) { fmt.Println(file.FullPath) }); err != nil {
 					log.Fatal(err)
 				}
 				took := time.Since(start)
@@ -268,7 +266,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	}
 }
 
-func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bool, f func(*metadata.FileInfo)) error {
+func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bool, f func(*metadata.FileInfo, *sync.WaitGroup)) error {
 	var wgWork sync.WaitGroup
 	work := make(chan string, 200)
 	defer close(work)
@@ -312,10 +310,7 @@ func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bo
 						work <- nextPath
 					} else {
 						wgFunc.Add(1)
-						go func() {
-							defer wgFunc.Done()
-							f(entry)
-						}()
+						f(entry, &wgFunc)
 					}
 					index++
 				}
@@ -330,7 +325,7 @@ func traverseDirectoryWorkStealing(c *client.Client, dirPath string, useCache bo
 	return nil
 }
 
-func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool, f func(*metadata.FileInfo)) error {
+func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool, f func(*metadata.FileInfo, *sync.WaitGroup)) error {
 	// Open the directory
 	dir, err := c.OpenDir(dirPath)
 	if err != nil {
@@ -362,7 +357,7 @@ func traverseDirectorySimple(c *client.Client, dirPath string, useCache bool, f 
 			}
 		} else {
 			// Write the file info to the CSV file
-			f(entry)
+			f(entry, new(sync.WaitGroup))
 		}
 		index++
 	}

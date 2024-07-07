@@ -8,30 +8,31 @@ data = pd.read_csv("../results/workstealing.csv")
 df = pd.DataFrame(data)
 
 # Function to convert time strings to milliseconds
-def convert_to_ms(time_str):
+def convert_to_seconds(time_str):
     if 'ms' in time_str:
-        return float(time_str.replace('ms', ''))
+        return float(time_str.replace('ms', '')) / 1000
     elif 's' in time_str:
-        return float(time_str.replace('s', '')) * 1000
+        return float(time_str.replace('s', '')) 
     else:
         raise ValueError("Unexpected time format")
 
 # Apply the conversion function to the 'Time Taken' column
-df['Time Taken'] = df['Time Taken'].apply(convert_to_ms)
+df['Time Taken'] = df['Time Taken'].apply(convert_to_seconds)
 
 # Compute the average time taken for each algorithm and folders per level
-avg_time = df.groupby(['Algo', 'FoldersPerLevel'])['Time Taken'].mean().reset_index()
+avg_time = df.groupby(['Algo', 'LatencyMS'])['Time Taken'].mean().reset_index()
 
 # Plot the data
 plt.figure(figsize=(12, 6))
 
 for algo in avg_time['Algo'].unique():
     algo_data = avg_time[avg_time['Algo'] == algo]
-    plt.plot(algo_data['FoldersPerLevel'], algo_data['Time Taken'], marker='o', label=algo)
+    plt.plot(algo_data['LatencyMS'], algo_data['Time Taken'], marker='o', label=algo)
 
-plt.xlabel('Folders Per Level')
-plt.ylabel('Average Time Taken (ms)')
+plt.xlabel('Latency per Request (milliseconds)')
+plt.ylabel('Average Time Taken (seconds)')
 plt.title('Average Time Taken by Algorithm and Folders Per Level')
 plt.legend()
 plt.grid(True)
+plt.savefig("../results/work_stealing.png")
 plt.show()
