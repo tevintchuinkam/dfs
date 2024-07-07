@@ -231,8 +231,6 @@ func gatherWorkStealingOptimisationData(iterations int) {
 		startAllServers(time.Duration(latency) * time.Millisecond)
 		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
 		for i := range NUM_ITERATIONS {
-			stopAllServers()
-			startAllServers(time.Duration(latency) * time.Millisecond)
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
 					traverse: traverseDirectorySimple,
