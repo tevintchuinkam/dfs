@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the data
-data = pd.read_csv("../results/workstealing.csv")
+data = pd.read_csv("../results/workstealing_micro.csv")
 
 # Convert the data into a DataFrame
 df = pd.DataFrame(data)
