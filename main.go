@@ -78,12 +78,12 @@ func measureLatency() {
 		log.Printf("%d of %d\n", i, n)
 	}
 	log.Printf("average latency: %v\n", totalTime/time.Duration(n))
-	os.Exit(0)
 }
 
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
 	log.SetFlags(log.Lshortfile)
+	measureLatency()
 	// Parse command-line flags for example  -iterations=1 -functions=flat
 	iterations := flag.Int("iterations", 5, "number of iterations for the optimization data gathering")
 	functions := flag.String("functions", "all", "comma-separated list of functions to run: flat, stealing, grep")
