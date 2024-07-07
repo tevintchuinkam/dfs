@@ -14,6 +14,7 @@ def convert_time_to_seconds(time_str):
 
 df["Time Taken (s)"] = df["Time Taken"].apply(convert_time_to_seconds)
 
+
 # Compute the average time taken for each algorithm and folders per level
 df = df.groupby(['FileCount', 'DataProximity'])['Time Taken (s)'].mean().reset_index()
 

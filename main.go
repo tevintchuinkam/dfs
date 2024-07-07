@@ -224,7 +224,6 @@ func gatherWorkStealingOptimisationData(iterations int) {
 		name     string
 	}
 
-	// do a file traversal (with and without metadata prefetching)
 	useCache := false
 	foldersPerLevel := 5
 	for latency := range 10 {
