@@ -155,15 +155,15 @@ func gatherDataProximityOptimizationData(iterations int) {
 					f = func(file *metadata.FileInfo, wg *sync.WaitGroup) {
 						defer wg.Done()
 						// fetch the file from the chunk server
-						start := time.Now()
+						//start := time.Now()
 						bytes, err := c.GetFileFromPortWithStream(file.Port, file.FullPath)
 						if err != nil {
 							log.Fatal(err)
 						}
-						took := time.Since(start)
-						start = time.Now()
+						//took := time.Since(start)
+						//start = time.Now()
 						total := grep.CountWordOccurrences(bytes, word)
-						fmt.Printf("OFF found %s %d times in file %s of size %dMB fetching_took=%v counting_took%v\n", word, total, file.FullPath, fileSizeMB, took, time.Since(start))
+						// fmt.Printf("OFF found %s %d times in file %s of size %dMB fetching_took=%v counting_took%v\n", word, total, file.FullPath, fileSizeMB, took, time.Since(start))
 						mu.Lock()
 						*totalCount += total
 						mu.Unlock()
@@ -174,12 +174,12 @@ func gatherDataProximityOptimizationData(iterations int) {
 						defer wg.Done()
 						go func() {
 							// compute the count on the fileserver and reduce on the client
-							start := time.Now()
+							// start := time.Now()
 							count, err := c.GrepOnFileServer(file.FullPath, word, file.Port)
 							if err != nil {
 								log.Fatal(err)
 							}
-							fmt.Printf("ON found %s %d times in file %s of size %dMB took=%v\n", word, count, file.FullPath, fileSizeMB, time.Since(start))
+							// fmt.Printf("ON found %s %d times in file %s of size %dMB took=%v\n", word, count, file.FullPath, fileSizeMB, time.Since(start))
 							mu.Lock()
 							*totalCount += count
 							mu.Unlock()
