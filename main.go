@@ -67,6 +67,20 @@ func stopAllServers() {
 	}
 }
 
+func measureLatency() {
+	mds := client.NewMDSClient(MDS_PORT)
+	n := 1000000
+	totalTime := 0 * time.Millisecond
+	for i := range n {
+		start := time.Now()
+		mds.Ping(context.Background(), &metadata.PingRequest{})
+		totalTime += time.Since(start)
+		log.Printf("%d of %d\n", i, n)
+	}
+	log.Printf("average latency: %v\n", totalTime/time.Duration(n))
+	os.Exit(0)
+}
+
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
 	log.SetFlags(log.Lshortfile)
@@ -92,6 +106,8 @@ func main() {
 		fmt.Printf("gather data for data_proximity optimization with a redundancy of %d iterations...\n", *iterations)
 		gatherDataProximityOptimizationData(*iterations)
 	}
+
+	measureLatency()
 }
 
 func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int, levels int) {
@@ -227,7 +243,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	for latency := range 8 {
 		slog.Info("restarting servers", "latency", latency)
 		stopAllServers()
-		startAllServers(time.Duration(latency) * time.Millisecond)
+		startAllServers(time.Duration(latency) * time.Microsecond)
 		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){

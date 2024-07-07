@@ -306,3 +306,7 @@ func (s *MetaDataServer) ReadDirAll(ctx context.Context, req *ReadDirRequest) (*
 
 	return res, nil
 }
+
+func (s *MetaDataServer) Ping(ctx context.Context, req *PingRequest) (*PingResponse, error) {
+	return &PingResponse{}, nil
+}

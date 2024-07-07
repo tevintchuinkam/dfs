@@ -29,6 +29,7 @@ type MetadataServiceClient interface {
 	ReadDirAll(ctx context.Context, in *ReadDirRequest, opts ...grpc.CallOption) (*ReadDirAllResponse, error)
 	MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error)
 	DeleteAllData(ctx context.Context, in *DeleteAllDataRequest, opts ...grpc.CallOption) (*DeleteAllDataReponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type metadataServiceClient struct {
@@ -102,6 +103,15 @@ func (c *metadataServiceClient) DeleteAllData(ctx context.Context, in *DeleteAll
 	return out, nil
 }
 
+func (c *metadataServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/metadata.MetadataService/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MetadataServiceServer is the server API for MetadataService service.
 // All implementations must embed UnimplementedMetadataServiceServer
 // for forward compatibility
@@ -113,6 +123,7 @@ type MetadataServiceServer interface {
 	ReadDirAll(context.Context, *ReadDirRequest) (*ReadDirAllResponse, error)
 	MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error)
 	DeleteAllData(context.Context, *DeleteAllDataRequest) (*DeleteAllDataReponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedMetadataServiceServer()
 }
 
@@ -140,6 +151,9 @@ func (UnimplementedMetadataServiceServer) MkDir(context.Context, *MkDirRequest) 
 }
 func (UnimplementedMetadataServiceServer) DeleteAllData(context.Context, *DeleteAllDataRequest) (*DeleteAllDataReponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllData not implemented")
+}
+func (UnimplementedMetadataServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedMetadataServiceServer) mustEmbedUnimplementedMetadataServiceServer() {}
 
@@ -280,6 +294,24 @@ func _MetadataService_DeleteAllData_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MetadataService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetadataServiceServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/metadata.MetadataService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetadataServiceServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MetadataService_ServiceDesc is the grpc.ServiceDesc for MetadataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -314,6 +346,10 @@ var MetadataService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAllData",
 			Handler:    _MetadataService_DeleteAllData_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _MetadataService_Ping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

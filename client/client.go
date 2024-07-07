@@ -49,7 +49,7 @@ func New(mdsPort int, pefetchThreshold int) *Client {
 }
 
 func (c *Client) DeleteAllData() {
-	m := newMDSClient(c.mdsPort)
+	m := NewMDSClient(c.mdsPort)
 	_, err := m.DeleteAllData(context.Background(), &metadata.DeleteAllDataRequest{})
 	if err != nil {
 		log.Fatal(err)
@@ -110,7 +110,7 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 	}
 
 	// request the file from mds, no caching
-	m := newMDSClient(c.mdsPort)
+	m := NewMDSClient(c.mdsPort)
 	r, err := m.ReadDir(context.Background(), &metadata.ReadDirRequest{
 		Name:  name,
 		Index: int32(index),
@@ -122,7 +122,7 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 }
 
 func _prefetchDir(c *Client, name string) ([]*metadata.FileInfo, error) {
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	r, err := mds.ReadDirAll(context.Background(), &metadata.ReadDirRequest{
 		Name: name,
 	})
@@ -134,7 +134,7 @@ func _prefetchDir(c *Client, name string) ([]*metadata.FileInfo, error) {
 
 // open a directory
 func (c *Client) OpenDir(name string) (string, error) {
-	m := newMDSClient(c.mdsPort)
+	m := NewMDSClient(c.mdsPort)
 	r, err := m.OpenDir(context.Background(), &metadata.OpenDirRequest{
 		Name: name,
 	})
@@ -147,7 +147,7 @@ func (c *Client) OpenDir(name string) (string, error) {
 
 func (c *Client) CreateFile(name string, data []byte) (int, error) {
 	// ask the mds on on what storage server to store the file
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	rec, err := mds.RegisterFileCreation(context.Background(), &metadata.RecRequest{
 		Name:     name,
 		FileSize: int64(len(data)),
@@ -171,7 +171,7 @@ func (c *Client) CreateFile(name string, data []byte) (int, error) {
 }
 
 func (c *Client) MkDir(name string) error {
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	_, err := mds.MkDir(context.Background(), &metadata.MkDirRequest{
 		Name: name,
 	})
@@ -183,7 +183,7 @@ func (c *Client) MkDir(name string) error {
 }
 
 func (c *Client) GetFile(name string) ([]byte, error) {
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	loc, err := mds.GetLocation(context.Background(), &metadata.LocRequest{
 		Name: name,
 	})
@@ -252,7 +252,7 @@ func (c *Client) GrepOnFileServer(fileName string, word string, port int32) (int
 	return int(r.Count), nil
 }
 
-func newMDSClient(port int) metadata.MetadataServiceClient {
+func NewMDSClient(port int) metadata.MetadataServiceClient {
 	var conn *grpc.ClientConn
 	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -262,7 +262,7 @@ func newMDSClient(port int) metadata.MetadataServiceClient {
 }
 
 func (c *Client) CreateFileWithStream(name string, data []byte) (int, error) {
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	rec, err := mds.RegisterFileCreation(context.Background(), &metadata.RecRequest{
 		Name:     name,
 		FileSize: int64(len(data)),
@@ -325,7 +325,7 @@ func (c *Client) CreateFileWithStream(name string, data []byte) (int, error) {
 }
 
 func (c *Client) GetFileWithStream(name string) ([]byte, error) {
-	mds := newMDSClient(c.mdsPort)
+	mds := NewMDSClient(c.mdsPort)
 	loc, err := mds.GetLocation(context.Background(), &metadata.LocRequest{
 		Name: name,
 	})
