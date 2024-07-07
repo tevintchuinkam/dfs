@@ -106,8 +106,6 @@ func main() {
 		fmt.Printf("gather data for data_proximity optimization with a redundancy of %d iterations...\n", *iterations)
 		gatherDataProximityOptimizationData(*iterations)
 	}
-
-	measureLatency()
 }
 
 func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, filesPerFolder int, foldersPerLevel int, levels int) {
@@ -230,7 +228,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	data := generateData(1)
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "LatencyMS"})
+	csvFile, writer := openCSVFile("results/workstealing.csv", []string{"Algo", "Iteration", "Time Taken", "FoldersPerLevel"})
 	defer csvFile.Close()
 
 	type TraversalAlgo struct {
@@ -239,12 +237,10 @@ func gatherWorkStealingOptimisationData(iterations int) {
 	}
 
 	useCache := false
-	foldersPerLevel := 5
-	for latency := 0; latency < 150; latency += 10 {
-		slog.Info("restarting servers", "latency", latency)
-		stopAllServers()
-		startAllServers(time.Duration(latency) * time.Microsecond)
-		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel, 2)
+	stopAllServers()
+	startAllServers(time.Duration(0))
+	for foldersPerLevel := range 10 {
+		createFilesAndDirs(c, ".", 1, data, 10, foldersPerLevel+1, 2)
 		for i := range NUM_ITERATIONS {
 			for _, algo := range [](TraversalAlgo){
 				TraversalAlgo{
@@ -269,7 +265,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 						algo.name,
 						fmt.Sprint(i),
 						took.String(),
-						fmt.Sprint(latency),
+						fmt.Sprint(foldersPerLevel + 1),
 					},
 				); err != nil {
 					log.Fatal(err)
@@ -277,6 +273,7 @@ func gatherWorkStealingOptimisationData(iterations int) {
 				writer.Flush()
 			}
 		}
+
 	}
 }
 
