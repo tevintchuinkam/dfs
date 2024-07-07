@@ -139,7 +139,7 @@ func gatherDataProximityOptimizationData(iterations int) {
 	defer csvFile.Close()
 
 	useCache := false
-	fileSizeMB := 20
+	fileSizeMB := 5
 	for _, dataProximity := range []bool{true, false} {
 		for filesPerFolder := range 16 {
 			for i := range NUM_ITERATIONS {
@@ -169,7 +169,6 @@ func gatherDataProximityOptimizationData(iterations int) {
 						mu.Unlock()
 					}
 				} else {
-					fmt.Println("using grep on file server func")
 					f = func(file *metadata.FileInfo, wg *sync.WaitGroup) {
 						defer wg.Done()
 						go func() {
