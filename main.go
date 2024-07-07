@@ -139,9 +139,9 @@ func gatherDataProximityOptimizationData(iterations int) {
 	defer csvFile.Close()
 
 	useCache := false
-	fileSizeMB := 10
+	fileSizeMB := 20
 	for _, dataProximity := range []bool{true, false} {
-		for filesPerFolder := range 32 {
+		for filesPerFolder := range 16 {
 			for i := range NUM_ITERATIONS {
 				stopAllServers()
 				startAllServers(0)
