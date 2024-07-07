@@ -92,7 +92,7 @@ func main() {
 	}
 	if runGrep {
 		fmt.Printf("gather data for data_proximity optimization with a redundancy of %d iterations...\n", *iterations)
-		gatherGrepOptimizationData(*iterations)
+		gatherDataProximityOptimizationData(*iterations)
 	}
 }
 
@@ -128,7 +128,7 @@ func createFilesAndDirs(c *client.Client, dir string, level int, data []byte, fi
 	}
 }
 
-func gatherGrepOptimizationData(iterations int) {
+func gatherDataProximityOptimizationData(iterations int) {
 	const CLIENT_PREFETCH_THRESHOLD = 8
 	var NUM_ITERATIONS = iterations
 	c := client.New(MDS_PORT, CLIENT_PREFETCH_THRESHOLD)
@@ -197,6 +197,7 @@ func gatherGrepOptimizationData(iterations int) {
 						took.String(),
 						fmt.Sprint(fileSizeMB),
 						fmt.Sprint(dataProximity),
+						fmt.Sprint(filesPerFolder),
 					},
 				); err != nil {
 					log.Fatal(err)
