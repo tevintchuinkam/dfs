@@ -141,7 +141,7 @@ func gatherDataProximityOptimizationData(iterations int) {
 	useCache := false
 	fileSizeMB := 10
 	for _, dataProximity := range []bool{true, false} {
-		for filesPerFolder := range 16 {
+		for filesPerFolder := range 32 {
 			for i := range NUM_ITERATIONS {
 				stopAllServers()
 				startAllServers(0)
@@ -197,7 +197,7 @@ func gatherDataProximityOptimizationData(iterations int) {
 						took.String(),
 						fmt.Sprint(fileSizeMB),
 						fmt.Sprint(dataProximity),
-						fmt.Sprint(filesPerFolder),
+						fmt.Sprint(filesPerFolder + 1),
 					},
 				); err != nil {
 					log.Fatal(err)
