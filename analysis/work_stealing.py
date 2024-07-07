@@ -20,14 +20,14 @@ def convert_to_seconds(time_str):
 df['Time Taken'] = df['Time Taken'].apply(convert_to_seconds)
 
 # Compute the average time taken for each algorithm and folders per level
-avg_time = df.groupby(['Algo', 'LatencyMicroseconds'])['Time Taken'].median().reset_index()
+avg_time = df.groupby(['Algo', 'AddedLatency'])['Time Taken'].median().reset_index()
 
 # Plot the data
 plt.figure(figsize=(12, 6))
 
 for algo in avg_time['Algo'].unique():
     algo_data = avg_time[avg_time['Algo'] == algo]
-    plt.plot(algo_data['LatencyMicroseconds'], algo_data['Time Taken'], marker='o', label=algo)
+    plt.plot(algo_data['AddedLatency'], algo_data['Time Taken'], marker='o', label=algo)
 
 plt.xlabel('Latency per Request (microseconds)')
 plt.ylabel('Average Time Taken (seconds)')
