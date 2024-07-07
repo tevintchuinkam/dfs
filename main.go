@@ -135,7 +135,7 @@ func gatherDataProximityOptimizationData(iterations int) {
 	c.ClearCache()
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/data_proximity.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "DataProximity", "Files"})
+	csvFile, writer := openCSVFile("results/data_proximity.csv", []string{"Iteration", "Time Taken", "FileSizeMB", "DataProximity", "FileCount"})
 	defer csvFile.Close()
 
 	useCache := false
