@@ -30,8 +30,8 @@ for algo in avg_time['Algo'].unique():
     plt.plot(algo_data['AddedLatency'], algo_data['Time Taken'], marker='o', label=algo)
 
 plt.xlabel('Added Latency per Request (milliseconds)')
-plt.ylabel('Average Time Taken (seconds)')
-plt.title('Average Time Taken by Algorithm and Folders Per Level')
+plt.ylabel('Median Time Taken (seconds)')
+plt.title('Median Time Taken by Algorithm for Directory Traversal')
 plt.legend()
 plt.grid(True)
 plt.savefig("../results/work_stealing.png")
