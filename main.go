@@ -427,7 +427,7 @@ func gatherFlatOptimisationData(iterations int) {
 	}
 
 	// Open the CSV file
-	csvFile, writer := openCSVFile("results/flat.csv", []string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
+	csvFile, writer := openCSVFile("results/prefetching.csv", []string{"Timestamp", "Time Taken", "Iteration", "UseCache"})
 	defer csvFile.Close()
 
 	// do a file traversal (with and without metadata prefetching)

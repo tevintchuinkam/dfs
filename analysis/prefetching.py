@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file
-df = pd.read_csv("../results/results.csv")
+df = pd.read_csv("../results/prefetching.csv")
 
 # Convert UseCache to boolean type if it is not already
 df['UseCache'] = df['UseCache'].astype('bool')
