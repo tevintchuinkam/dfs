@@ -29,7 +29,7 @@ for algo in avg_time['Algo'].unique():
     algo_data = avg_time[avg_time['Algo'] == algo]
     plt.plot(algo_data['AddedLatency'], algo_data['Time Taken'], marker='o', label=algo)
 
-plt.xlabel('Latency per Request (microseconds)')
+plt.xlabel('Added Latency per Request (milliseconds)')
 plt.ylabel('Average Time Taken (seconds)')
 plt.title('Average Time Taken by Algorithm and Folders Per Level')
 plt.legend()

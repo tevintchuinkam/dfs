@@ -21,8 +21,8 @@ func init() {
 }
 
 type accessData struct {
-	lastAccess                       time.Time
-	accessCountInLast100MilliSeconds int
+	lastAccess  time.Time
+	accessCount int
 }
 
 type Client struct {
@@ -79,10 +79,10 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 
 		// cache the metadata
 		if h, ok := c.predictionHistory[name]; ok {
-			if h.lastAccess.Before(time.Now().Add(-100 * time.Millisecond)) {
-				h.accessCountInLast100MilliSeconds = 0
+			if h.lastAccess.Before(time.Now().Add(-1 * time.Second)) {
+				h.accessCount = 0
 			} else {
-				if h.accessCountInLast100MilliSeconds >= c.prefetchThreshold-1 {
+				if h.accessCount >= c.prefetchThreshold-1 {
 					// this is the trigger to prefetch the entire dir from mds
 					// slog.Info("prefetching directory", "dir", name, "trigger_index", index)
 					entries, err := _prefetchDir(c, name)
@@ -99,12 +99,12 @@ func (c *Client) ReadDir(name string, index int, useCache bool) (*metadata.FileI
 					return entries[index], nil
 				}
 			}
-			h.accessCountInLast100MilliSeconds++
+			h.accessCount++
 			h.lastAccess = time.Now()
 		} else {
 			c.predictionHistory[name] = &accessData{
-				lastAccess:                       time.Now(),
-				accessCountInLast100MilliSeconds: 0,
+				lastAccess:  time.Now(),
+				accessCount: 0,
 			}
 		}
 	}
