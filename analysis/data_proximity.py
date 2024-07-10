@@ -14,15 +14,20 @@ def convert_time_to_seconds(time_str):
 
 df["Time Taken (s)"] = df["Time Taken"].apply(convert_time_to_seconds)
 
+# Compute the 95th percentile for each group
+df['p95'] = df.groupby(['FileCount', 'DataProximity'])['Time Taken (s)'].transform(lambda x: x.quantile(0.95))
+
+# Filter the values to include only those below the 95th percentile
+df_filtered = df[df['Time Taken (s)'] <= df['p95']]
 
 # Compute the average time taken for each algorithm and folders per level
-df = df.groupby(['FileCount', 'DataProximity'])['Time Taken (s)'].mean().reset_index()
+df_mean = df_filtered.groupby(['FileCount', 'DataProximity'])['Time Taken (s)'].mean().reset_index()
 
 # Plotting
 plt.figure(figsize=(12, 6))
 
-for proximity in df["DataProximity"].unique():
-    subset = df[df["DataProximity"] == proximity]
+for proximity in df_mean["DataProximity"].unique():
+    subset = df_mean[df_mean["DataProximity"] == proximity]
     plt.plot(subset["FileCount"], subset["Time Taken (s)"], marker='o', label=f'DataProximity={proximity}')
 
 plt.xlabel('File Count')
