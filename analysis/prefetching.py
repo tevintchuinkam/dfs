@@ -31,7 +31,7 @@ def process_data(df, percentile):
     return p90_df
 
 # Specify the percentile
-percentile = 0.90
+percentile = 0.95
 
 # Process data for true and false UseCache values
 p90_df_true = process_data(df_true, percentile)
@@ -48,7 +48,7 @@ plt.plot(p90_df_true['Call Index'], p90_df_true['P90 Time Taken'], marker='o', l
 plt.plot(p90_df_false['Call Index'], p90_df_false['P90 Time Taken'], marker='x', linestyle='-', label='UseCache=False')
 
 plt.xlabel('Call Index')
-plt.ylabel('P90 Time Taken (ms)')
+plt.ylabel('P90 Time Taken [milliseconds]')
 plt.title('90th Percentile Time Taken for Each Call Over Iterations')
 plt.legend()
 plt.grid(True)

@@ -29,8 +29,8 @@ for algo in avg_time['Algo'].unique():
     algo_data = avg_time[avg_time['Algo'] == algo]
     plt.plot(algo_data['AddedLatency'], algo_data['Time Taken'], marker='o', label=algo)
 
-plt.xlabel('Added Latency per Request (milliseconds)')
-plt.ylabel('Median Time Taken (seconds)')
+plt.xlabel('Added Latency per Request [milliseconds]')
+plt.ylabel('Median Time Taken [seconds]')
 plt.title('Median Time Taken by Algorithm for Directory Traversal')
 plt.legend()
 plt.grid(True)

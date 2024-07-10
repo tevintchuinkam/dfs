@@ -26,7 +26,7 @@ for proximity in df["DataProximity"].unique():
     plt.plot(subset["FileCount"], subset["Time Taken (s)"], marker='o', label=f'DataProximity={proximity}')
 
 plt.xlabel('File Count')
-plt.ylabel('Time Taken (s)')
+plt.ylabel('Time Taken [seconds]')
 plt.title('Time Taken vs File Count with Data Proximity')
 plt.legend()
 plt.grid(True)
