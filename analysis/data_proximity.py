@@ -32,7 +32,7 @@ for proximity in df_mean["DataProximity"].unique():
 
 plt.xlabel('File Count')
 plt.ylabel('Time Taken [seconds]')
-plt.title('Time Taken vs File Count with Data Proximity')
+plt.title('Time Taken vs File Count with and without Data Proximity')
 plt.legend()
 plt.grid(True)
 plt.savefig("../results/data_proximity.png")
